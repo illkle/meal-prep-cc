@@ -130,6 +130,7 @@ export function IngredientsTable({
                 const cellWidth = (
                   cell.column.columnDef.meta as { width?: string } | undefined
                 )?.width;
+                
                 return (
                   <td
                     key={cell.id}
@@ -212,25 +213,31 @@ function useIngredientColumns({
     []
   );
 
-  const handleUnitsChange = useCallback((ingredientId: string, nextValue: number) => {
-    if (!Number.isFinite(nextValue) || nextValue <= 0) return;
-    const now = new Date().toISOString();
-    recipeIngredientsCollection.update(ingredientId, (draft) => {
-      draft.quantityType = 'portions';
-      draft.quantityValue = nextValue;
-      draft.updatedAt = now;
-    });
-  }, []);
+  const handleUnitsChange = useCallback(
+    (ingredientId: string, nextValue: number) => {
+      if (!Number.isFinite(nextValue) || nextValue <= 0) return;
+      const now = new Date().toISOString();
+      recipeIngredientsCollection.update(ingredientId, (draft) => {
+        draft.quantityType = 'portions';
+        draft.quantityValue = nextValue;
+        draft.updatedAt = now;
+      });
+    },
+    []
+  );
 
-  const handleGramsChange = useCallback((ingredientId: string, nextValue: number) => {
-    if (!Number.isFinite(nextValue) || nextValue <= 0) return;
-    const now = new Date().toISOString();
-    recipeIngredientsCollection.update(ingredientId, (draft) => {
-      draft.quantityType = 'grams';
-      draft.quantityValue = nextValue;
-      draft.updatedAt = now;
-    });
-  }, []);
+  const handleGramsChange = useCallback(
+    (ingredientId: string, nextValue: number) => {
+      if (!Number.isFinite(nextValue) || nextValue <= 0) return;
+      const now = new Date().toISOString();
+      recipeIngredientsCollection.update(ingredientId, (draft) => {
+        draft.quantityType = 'grams';
+        draft.quantityValue = nextValue;
+        draft.updatedAt = now;
+      });
+    },
+    []
+  );
 
   const handleDelete = useCallback((ingredientId: string) => {
     recipeIngredientsCollection.delete(ingredientId);
@@ -428,7 +435,9 @@ function FoodCell({
             </SuggestionButton>
           ))}
           {!renameAvailable && matches.length === 0 ? (
-            <div className="px-3 py-2 text-muted-foreground">Type to search</div>
+            <div className="px-3 py-2 text-muted-foreground">
+              Type to search
+            </div>
           ) : null}
         </div>
       ) : null}
