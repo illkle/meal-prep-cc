@@ -2,16 +2,8 @@ import { useMemo } from 'react'
 
 import { eq, useLiveQuery } from '@tanstack/react-db'
 
-import {
-  foodItemsCollection,
-  recipeIngredientsCollection,
-  recipesCollection,
-} from './collections'
-import {
-  calculateIngredientMacros,
-  perPortionMacros,
-  sumMacros,
-} from './calculations'
+import { foodItemsCollection, recipeIngredientsCollection, recipesCollection } from './collections'
+import { calculateIngredientMacros, sumMacros } from './calculations'
 
 export function useFoodItems() {
   return useLiveQuery(() => foodItemsCollection)
@@ -71,18 +63,11 @@ export function useRecipeNutrition(recipeId?: string) {
     }
 
     const totals = sumMacros(
-      joinedQuery.data.map(({ ingredient, food }) =>
-        calculateIngredientMacros(ingredient, food),
-      ),
+      joinedQuery.data.map(({ ingredient, food }) => calculateIngredientMacros(ingredient, food)),
     )
-
-    const perPortion = recipeQuery.data
-      ? perPortionMacros(totals, recipeQuery.data.portionsPrepared)
-      : undefined
 
     return {
       totals,
-      perPortion,
     }
   }, [joinedQuery.data, recipeQuery.data])
 
