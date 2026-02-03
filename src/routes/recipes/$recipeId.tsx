@@ -7,7 +7,6 @@ import {
   getCoreRowModel,
   useReactTable,
   type ColumnDef,
-  type Table,
 } from '@tanstack/react-table';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 
@@ -23,8 +22,8 @@ import {
   foodItemsCollection,
   recipeIngredientsCollection,
   recipesCollection,
-  useFoodItems,
-  useRecipeNutrition,
+  useFoodsInRecipe,
+  useRecipe,
 } from '@/lib/db';
 import {
   calculateIngredientMacros,
@@ -68,18 +67,112 @@ const columnWidths = {
 
 function RecipePage() {
   const { recipeId } = Route.useParams();
-  const nutritionQuery = useRecipeNutrition(recipeId);
-  const foodsQuery = useFoodItems();
+  const recipeQuery = useRecipe(recipeId);
+  const foodsInRecipeQuery = useFoodsInRecipe(recipeId);
 
-  const recipe = nutritionQuery.recipe;
-  const nutrition = nutritionQuery.nutrition;
+  return (
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <SiteHeader />
 
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pb-16">
+        {recipeQuery.data ? <RecipeHero recipe={recipeQuery.data} /> : null}
+
+        <RecipeMacroSummary
+          foodsInRecipeQuery={foodsInRecipeQuery}
+          portions={recipeQuery.data?.portionsPrepared ?? 1}
+        />
+
+        <section className="flex flex-1 flex-col">
+          <div className="mt-6 ">
+            <IngredientsTable foodsInRecipeQuery={foodsInRecipeQuery} />
+          </div>
+
+          <div className="mt-6">
+            <AddIngredientButton recipeId={recipeId} />
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function RecipeHero({ recipe }: { recipe: Recipe }) {
+  const handleNameCommit = useCallback(
+    (name: string) => {
+      const nextName = name.trim();
+      if (!nextName || nextName === recipe.name) return;
+      const now = new Date().toISOString();
+      recipesCollection.update(recipe.id, (draft) => {
+        draft.name = nextName;
+        draft.updatedAt = now;
+      });
+    },
+    [recipe]
+  );
+
+  const handlePortionsCommit = useCallback(
+    (portions: number) => {
+      const nextValue = Number(portions);
+      if (!Number.isFinite(nextValue) || nextValue <= 0) {
+        return;
+      }
+      if (nextValue === recipe.portionsPrepared) return;
+      const now = new Date().toISOString();
+      recipesCollection.update(recipe.id, (draft) => {
+        draft.portionsPrepared = nextValue;
+        draft.updatedAt = now;
+      });
+    },
+    [recipe]
+  );
+
+  return (
+    <section className="border-b border-border py-8">
+      <div className="flex flex-col  sm:flex-row ">
+        <div className="flex w-full flex-1 flex-col gap-2">
+          <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">
+            Recipe Name
+          </label>
+          <Input
+            value={recipe?.name ?? ''}
+            onChange={(event) => handleNameCommit(event.target.value)}
+            disabled={!recipe}
+            className="h-14 w-full border border-border bg-transparent px-4 text-3xl font-semibold uppercase tracking-[0.35em]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2 sm:w-60">
+          <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">
+            Portions Prepared
+          </label>
+          <Input
+            type="number"
+            value={recipe?.portionsPrepared ?? 1}
+            min={1}
+            step={1}
+            onChange={(event) =>
+              handlePortionsCommit(Number(event.target.value))
+            }
+            disabled={!recipe}
+            className="h-14 border border-border border-l-0 px-4 text-3xl font-semibold uppercase tracking-[0.35em]"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IngredientsTable({
+  foodsInRecipeQuery,
+}: {
+  foodsInRecipeQuery: ReturnType<typeof useFoodsInRecipe>;
+}) {
   const rows: Array<IngredientRow> = useMemo(() => {
-    if (!nutritionQuery.data) {
+    if (!foodsInRecipeQuery.data) {
       return [];
     }
 
-    return nutritionQuery.data.map(({ ingredient, food }) => {
+    return foodsInRecipeQuery.data.map(({ ingredient, food }) => {
       const grams = gramsForIngredient(ingredient, food);
       const macros = calculateIngredientMacros(ingredient, food);
       const units = food.portionWeight
@@ -96,143 +189,18 @@ function RecipePage() {
         macros,
       };
     });
-  }, [nutritionQuery.data]);
+  }, [foodsInRecipeQuery.data]);
 
   const table = useReactTable<IngredientRow>({
     data: rows,
     columns: useIngredientColumns({
-      foods: foodsQuery.data ?? [],
+      foods: foodsInRecipeQuery.data?.map(({ food }) => food) ?? [],
     }),
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.ingredient.id,
     state: {},
   });
 
-  return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <SiteHeader />
-
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pb-16">
-        <RecipeHero recipe={recipe} nutrition={nutrition} isLoading={!recipe} />
-
-        <section className="flex flex-1 flex-col">
-          <div className="mt-6 overflow-x-auto">
-            <IngredientsTable table={table} isEmpty={!rows.length} />
-          </div>
-
-          <div className="mt-6">
-            <AddIngredientButton recipeId={recipeId} />
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-function RecipeHero({
-  recipe,
-  nutrition,
-  isLoading,
-}: {
-  recipe?: Recipe;
-  nutrition?: { totals: MacroTotals; perPortion?: MacroTotals };
-  isLoading: boolean;
-}) {
-  const [name, setName] = useState(recipe?.name ?? '');
-  const [portions, setPortions] = useState(recipe?.portionsPrepared ?? 1);
-
-  useEffect(() => {
-    setName(recipe?.name ?? '');
-    setPortions(recipe?.portionsPrepared ?? 1);
-  }, [recipe?.name, recipe?.portionsPrepared]);
-
-  const handleNameCommit = useCallback(() => {
-    if (!recipe) return;
-    const nextName = name.trim();
-    if (!nextName || nextName === recipe.name) return;
-    const now = new Date().toISOString();
-    recipesCollection.update(recipe.id, (draft) => {
-      draft.name = nextName;
-      draft.updatedAt = now;
-    });
-  }, [name, recipe]);
-
-  const handlePortionsCommit = useCallback(() => {
-    if (!recipe) return;
-    const nextValue = Number(portions);
-    if (!Number.isFinite(nextValue) || nextValue <= 0) {
-      setPortions(recipe.portionsPrepared);
-      return;
-    }
-    if (nextValue === recipe.portionsPrepared) return;
-    const now = new Date().toISOString();
-    recipesCollection.update(recipe.id, (draft) => {
-      draft.portionsPrepared = nextValue;
-      draft.updatedAt = now;
-    });
-  }, [portions, recipe]);
-
-  console.log('portions', nutrition);
-
-  return (
-    <section className="border-b border-border py-8">
-      <div className="flex flex-col  sm:flex-row ">
-        <div className="flex w-full flex-1 flex-col gap-2">
-          <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">
-            Recipe Name
-          </label>
-          <Input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            onBlur={handleNameCommit}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handleNameCommit();
-              }
-            }}
-            disabled={!recipe}
-            className="h-14 w-full border border-border bg-transparent px-4 text-3xl font-semibold uppercase tracking-[0.35em]"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2 sm:w-60">
-          <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">
-            Portions Prepared
-          </label>
-          <Input
-            type="number"
-            value={portions}
-            min={1}
-            step={1}
-            onChange={(event) => setPortions(Number(event.target.value))}
-            onBlur={handlePortionsCommit}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handlePortionsCommit();
-              }
-            }}
-            disabled={!recipe}
-            className="h-14 border border-border border-l-0 px-4 text-3xl font-semibold uppercase tracking-[0.35em]"
-          />
-        </div>
-      </div>
-
-      <RecipeMacroSummary
-        nutrition={nutrition}
-        portions={portions}
-        isLoading={isLoading}
-      />
-    </section>
-  );
-}
-
-function IngredientsTable({
-  table,
-  isEmpty,
-}: {
-  table: Table<IngredientRow>;
-  isEmpty: boolean;
-}) {
   return (
     <div className="min-w-full rounded-none border border-border">
       <table className="min-w-full table-fixed border-collapse text-left text-xs uppercase tracking-[0.2em]">
@@ -293,7 +261,7 @@ function IngredientsTable({
         </tbody>
       </table>
 
-      {isEmpty ? (
+      {foodsInRecipeQuery.data?.length === 0 ? (
         <div className="px-4 py-10 text-center text-xs uppercase tracking-[0.35em] text-muted-foreground">
           No ingredients yet. Add one below.
         </div>
@@ -443,7 +411,7 @@ function useIngredientColumns({
       },
       {
         id: 'portionWeight',
-        header: 'Unit Weight (g)',
+        header: 'Unit Weight',
         meta: { width: columnWidths.portionWeight },
         cell: ({ row }) => (
           <EditableNumberCell
@@ -654,7 +622,6 @@ function EditableNumberCell({
   min,
   step,
   autoFocusOnEmpty,
-  allowEmptyClears,
 }: {
   value: number | null;
   placeholder: string;
@@ -665,42 +632,14 @@ function EditableNumberCell({
   allowEmptyClears?: boolean;
 }) {
   const [editing, setEditing] = useState(autoFocusOnEmpty ? !value : false);
-  const [draft, setDraft] = useState(value?.toString() ?? '');
-
-  useEffect(() => {
-    setDraft(value?.toString() ?? '');
-  }, [value]);
-
-  const commit = useCallback(() => {
-    if (!draft.trim().length && allowEmptyClears) {
-      onCommit(0);
-      setEditing(false);
-      setDraft('');
-      return;
-    }
-    const nextValue = Number.parseFloat(draft);
-    if (!Number.isFinite(nextValue)) {
-      setDraft(value?.toString() ?? '');
-      setEditing(false);
-      return;
-    }
-    onCommit(nextValue);
-    setEditing(false);
-  }, [allowEmptyClears, draft, onCommit, value]);
 
   return editing ? (
     <Input
       type="number"
       min={min}
       step={step}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          commit();
-        }
-      }}
+      value={value ?? ''}
+      onChange={(event) => onCommit(Number(event.target.value))}
       className="h-12 w-full border-0 px-3 text-xs"
       autoFocus
     />
@@ -722,32 +661,11 @@ function InlineInput({
   value: number;
   onCommit: (value: number) => void;
 }) {
-  const [draft, setDraft] = useState(value.toString());
-
-  useEffect(() => {
-    setDraft(value.toString());
-  }, [value]);
-
-  const commit = useCallback(() => {
-    const next = Number.parseFloat(draft);
-    if (!Number.isFinite(next)) {
-      setDraft(value.toString());
-      return;
-    }
-    onCommit(next);
-  }, [draft, onCommit, value]);
-
   return (
     <Input
       type="number"
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          commit();
-        }
-      }}
+      value={value}
+      onChange={(event) => onCommit(Number(event.target.value))}
       className="h-12 w-full border-0 px-2 text-xs"
     />
   );

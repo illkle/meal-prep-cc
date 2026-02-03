@@ -13,67 +13,58 @@ export function useRecipes() {
   return useLiveQuery(() => recipesCollection)
 }
 
-export function useRecipe(recipeId?: string) {
-  return useLiveQuery(
-    (q) =>
-      recipeId
-        ? q
-            .from({ recipe: recipesCollection })
-            .where(({ recipe }) => eq(recipe.id, recipeId))
-            .select(({ recipe }) => recipe)
-            .findOne()
-        : undefined,
-    [recipeId],
+export function useRecipe(recipeId: string) {
+  return useLiveQuery((q) =>
+    q
+      .from({ recipe: recipesCollection })
+      .where(({ recipe }) => eq(recipe.id, recipeId))
+      .findOne(),
   )
 }
 
-export function useRecipeIngredients(recipeId?: string) {
-  return useLiveQuery(
-    (q) =>
-      recipeId
-        ? q
-            .from({ ingredient: recipeIngredientsCollection })
-            .where(({ ingredient }) => eq(ingredient.recipeId, recipeId))
-            .select(({ ingredient }) => ingredient)
-        : undefined,
-    [recipeId],
+export function useRecipeIngredients(recipeId: string) {
+  return useLiveQuery((q) =>
+    q
+      .from({ ingredient: recipeIngredientsCollection })
+      .where(({ ingredient }) => eq(ingredient.recipeId, recipeId)),
   )
 }
 
-export function useRecipeNutrition(recipeId?: string) {
+export function useFoodsInRecipe(recipeId: string) {
+  return useLiveQuery((q) =>
+    q
+      .from({ ingredient: recipeIngredientsCollection })
+      .innerJoin({ food: foodItemsCollection }, ({ ingredient, food }) =>
+        eq(ingredient.foodId, food.id),
+      )
+      .where(({ ingredient }) => eq(ingredient.recipeId, recipeId))
+      .select(({ ingredient, food }) => ({ ingredient, food })),
+  )
+}
+
+export function useRecipeNutrition(recipeId: string) {
   const recipeQuery = useRecipe(recipeId)
-
-  const joinedQuery = useLiveQuery(
-    (q) =>
-      recipeId
-        ? q
-            .from({ ingredient: recipeIngredientsCollection })
-            .innerJoin({ food: foodItemsCollection }, ({ ingredient, food }) =>
-              eq(ingredient.foodId, food.id),
-            )
-            .where(({ ingredient }) => eq(ingredient.recipeId, recipeId))
-            .select(({ ingredient, food }) => ({ ingredient, food }))
-        : undefined,
-    [recipeId],
-  )
+  const foodsInRecipeQuery = useFoodsInRecipe(recipeId)
 
   const nutrition = useMemo(() => {
-    if (!joinedQuery.data) {
+    if (!foodsInRecipeQuery.data) {
       return undefined
     }
 
     const totals = sumMacros(
-      joinedQuery.data.map(({ ingredient, food }) => calculateIngredientMacros(ingredient, food)),
+      foodsInRecipeQuery.data.map(({ ingredient, food }) =>
+        calculateIngredientMacros(ingredient, food),
+      ),
     )
 
     return {
       totals,
     }
-  }, [joinedQuery.data, recipeQuery.data])
+  }, [foodsInRecipeQuery.data])
 
   return {
-    ...joinedQuery,
-    recipe: recipeQuery.data,
+    foodsInRecipeQuery,
+    recipeQuery,
     nutrition,
   }
 }
