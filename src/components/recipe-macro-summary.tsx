@@ -56,8 +56,8 @@ export function RecipeMacroSummary({
   const portionTotals = perPortionMacros(totals, portionCount);
 
   return (
-    <div className="mt-6">
-      <div className="rounded-sm border border-border bg-background/80 ">
+    <div className="">
+      <div className="rounded-sm border border-border border-t-0 bg-background/80 ">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
           <div className="flex flex-1 flex-wrap gap-6">
             {macroKeys.map((key) => {

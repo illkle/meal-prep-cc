@@ -9,6 +9,15 @@ export function useFoodItems() {
   return useLiveQuery(() => foodItemsCollection)
 }
 
+export function useFood(foodId: string) {
+  return useLiveQuery((q) =>
+    q
+      .from({ food: foodItemsCollection })
+      .where(({ food }) => eq(food.id, foodId))
+      .findOne(),
+  )
+}
+
 export function useRecipes() {
   return useLiveQuery(() => recipesCollection)
 }

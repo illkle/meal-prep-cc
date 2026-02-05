@@ -31,7 +31,7 @@ function RecipePage() {
 
         <section className="flex flex-1 flex-col">
           <div className="mt-6 ">
-            <IngredientsTable foodsInRecipeQuery={foodsInRecipeQuery} />
+            <IngredientsTable recipeId={recipeId} />
           </div>
 
           <div className="mt-6">

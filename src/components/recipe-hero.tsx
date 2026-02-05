@@ -35,7 +35,7 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
   );
 
   return (
-    <section className="border-b border-border py-8">
+    <section className="">
       <div className="flex flex-col  sm:flex-row ">
         <div className="flex w-full flex-1 flex-col gap-2">
           <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">

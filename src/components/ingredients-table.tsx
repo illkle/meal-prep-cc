@@ -1,18 +1,11 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table';
 import { Trash2Icon } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import { macroLabels } from '@/components/recipe-macro-summary';
 import type { FoodItem, MacroTotals, RecipeIngredient } from '@/lib/db';
-import type { useFoodsInRecipe } from '@/lib/db';
 import {
   calculateIngredientMacros,
   foodItemsCollection,
@@ -20,6 +13,7 @@ import {
   macroKeys,
   recipeIngredientsCollection,
 } from '@/lib/db';
+import { useFood, useFoodItems, useRecipeIngredients } from '@/lib/db';
 
 const macroFieldMap: Record<keyof MacroTotals, MacroFieldKey> = {
   calories: 'caloriesPer100g',
@@ -51,120 +45,20 @@ export type IngredientRow = {
   macros: MacroTotals;
 };
 
-export function IngredientsTable({
-  foodsInRecipeQuery,
-}: {
-  foodsInRecipeQuery: ReturnType<typeof useFoodsInRecipe>;
-}) {
-  const rows: Array<IngredientRow> = useMemo(() => {
-    if (!foodsInRecipeQuery.data) {
-      return [];
-    }
+const macroColumnHeaders = macroKeys.map((key) => ({
+  key,
+  label: macroLabels[key],
+}));
 
-    return foodsInRecipeQuery.data.map(({ ingredient, food }) => {
-      const grams = gramsForIngredient(ingredient, food);
-      const macros = calculateIngredientMacros(ingredient, food);
-      const units = food.portionWeight
-        ? ingredient.quantityType === 'portions'
-          ? ingredient.quantityValue
-          : Math.round((grams / food.portionWeight) * 100) / 100 || null
-        : null;
+const totalTableColumns = macroKeys.length + 5;
 
-      return {
-        ingredient,
-        food,
-        grams,
-        units,
-        macros,
-      };
-    });
-  }, [foodsInRecipeQuery.data]);
+export function IngredientsTable({ recipeId }: { recipeId: string }) {
+  const recipeIngredientsQuery = useRecipeIngredients(recipeId);
+  const foodsQuery = useFoodItems();
 
-  const table = useReactTable<IngredientRow>({
-    data: rows,
-    columns: useIngredientColumns({
-      foods: foodsInRecipeQuery.data?.map(({ food }) => food) ?? [],
-    }),
-    getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.ingredient.id,
-    state: {},
-  });
+  const ingredients = recipeIngredientsQuery.data ?? [];
+  const foods = foodsQuery.data ?? [];
 
-  return (
-    <div className="min-w-full rounded-none border border-border">
-      <table className="min-w-full table-fixed border-collapse text-left text-xs uppercase tracking-[0.2em]">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id} className="bg-muted/40">
-              {headerGroup.headers.map((header) => {
-                const headerWidth = (
-                  header.column.columnDef.meta as { width?: string } | undefined
-                )?.width;
-                return (
-                  <th
-                    key={header.id}
-                    className="p-0"
-                    style={headerWidth ? { width: headerWidth } : undefined}
-                  >
-                    <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row, rowIndex) => (
-            <tr
-              key={row.id}
-              className={rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const cellWidth = (
-                  cell.column.columnDef.meta as { width?: string } | undefined
-                )?.width;
-                
-                return (
-                  <td
-                    key={cell.id}
-                    className="p-0"
-                    style={cellWidth ? { width: cellWidth } : undefined}
-                  >
-                    <div className="h-full">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </div>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {foodsInRecipeQuery.data?.length === 0 ? (
-        <div className="px-4 py-10 text-center text-xs uppercase tracking-[0.35em] text-muted-foreground">
-          No ingredients yet. Add one below.
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function useIngredientColumns({
-  foods,
-}: {
-  foods: Array<FoodItem>;
-}): ColumnDef<IngredientRow>[] {
   const handleRename = useCallback((foodId: string, name: string) => {
     const nextName = name.trim();
     if (!nextName) return;
@@ -243,115 +137,194 @@ function useIngredientColumns({
     recipeIngredientsCollection.delete(ingredientId);
   }, []);
 
-  return useMemo<ColumnDef<IngredientRow>[]>(
-    () => [
-      {
-        id: 'food',
-        header: 'Food',
-        meta: { width: columnWidths.food },
-        cell: ({ row }) => (
-          <FoodCell
-            row={row.original}
-            foods={foods}
-            onRename={handleRename}
-            onSwap={handleSwap}
-          />
-        ),
-      },
-      {
-        id: 'portionWeight',
-        header: 'Unit Weight',
-        meta: { width: columnWidths.portionWeight },
-        cell: ({ row }) => (
-          <EditableNumberCell
-            value={row.original.food.portionWeight ?? null}
-            placeholder="—"
-            onCommit={(value) =>
-              handlePortionWeight(row.original.food.id, value)
-            }
-            min={1}
-            step="1"
-            allowEmptyClears
-          />
-        ),
-      },
-      ...macroKeys.map<ColumnDef<IngredientRow>>((key) => ({
-        id: `${key}-column`,
-        header: macroLabels[key],
-        meta: { width: columnWidths.macro },
-        cell: ({ row }) => (
-          <InlineInput
-            value={row.original.food[macroFieldMap[key]]}
-            onCommit={(value) =>
-              handleMacroChange(row.original.food.id, key, value)
-            }
-          />
-        ),
-      })),
-      {
-        id: 'units',
-        header: 'Units',
-        meta: { width: columnWidths.units },
-        cell: ({ row }) =>
-          row.original.food.portionWeight ? (
-            <EditableNumberCell
-              value={row.original.units}
-              placeholder="—"
-              onCommit={(value) =>
-                handleUnitsChange(row.original.ingredient.id, value)
-              }
-              min={0.01}
-              step="0.1"
+  return (
+    <div className="min-w-full rounded-none border border-border">
+      <table className="min-w-full table-fixed border-collapse text-left text-xs uppercase tracking-[0.2em]">
+        <thead>
+          <tr className="bg-muted/40">
+            <th className="p-0" style={{ width: columnWidths.food }}>
+              <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
+                Food
+              </div>
+            </th>
+            <th className="p-0" style={{ width: columnWidths.portionWeight }}>
+              <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
+                Unit Weight
+              </div>
+            </th>
+            {macroColumnHeaders.map(({ key, label }) => (
+              <th
+                key={key}
+                className="p-0"
+                style={{ width: columnWidths.macro }}
+              >
+                <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
+                  {label}
+                </div>
+              </th>
+            ))}
+            <th className="p-0" style={{ width: columnWidths.units }}>
+              <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
+                Units
+              </div>
+            </th>
+            <th className="p-0" style={{ width: columnWidths.grams }}>
+              <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
+                Grams
+              </div>
+            </th>
+            <th className="p-0" style={{ width: columnWidths.actions }}>
+              <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground" />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {ingredients.map((ingredient, index) => (
+            <IngredientTableRow
+              key={ingredient.id}
+              ingredient={ingredient}
+              rowIndex={index}
+              foods={foods}
+              onRename={handleRename}
+              onSwap={handleSwap}
+              onPortionWeight={handlePortionWeight}
+              onMacroChange={handleMacroChange}
+              onUnitsChange={handleUnitsChange}
+              onGramsChange={handleGramsChange}
+              onDelete={handleDelete}
             />
-          ) : (
-            <div className="flex h-12 w-full items-center px-3 text-sm text-muted-foreground">
-              —
-            </div>
-          ),
-      },
-      {
-        id: 'grams',
-        header: 'Grams',
-        meta: { width: columnWidths.grams },
-        cell: ({ row }) => (
-          <EditableNumberCell
-            value={row.original.grams}
-            placeholder="0"
-            onCommit={(value) =>
-              handleGramsChange(row.original.ingredient.id, value)
-            }
-            min={1}
-            step="1"
-            autoFocusOnEmpty
+          ))}
+        </tbody>
+      </table>
+
+      {recipeIngredientsQuery.data?.length === 0 ? (
+        <div className="px-4 py-10 text-center text-xs uppercase tracking-[0.35em] text-muted-foreground">
+          No ingredients yet. Add one below.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type IngredientTableRowProps = {
+  ingredient: RecipeIngredient;
+  rowIndex: number;
+  foods: Array<FoodItem>;
+  onRename: (foodId: string, name: string) => void;
+  onSwap: (
+    ingredient: RecipeIngredient,
+    targetFoodId: string,
+    grams: number
+  ) => void;
+  onPortionWeight: (foodId: string, weight?: number) => void;
+  onMacroChange: (
+    foodId: string,
+    key: keyof MacroTotals,
+    value: number
+  ) => void;
+  onUnitsChange: (ingredientId: string, nextValue: number) => void;
+  onGramsChange: (ingredientId: string, nextValue: number) => void;
+  onDelete: (ingredientId: string) => void;
+};
+
+function IngredientTableRow({
+  ingredient,
+  rowIndex,
+  foods,
+  onRename,
+  onSwap,
+  onPortionWeight,
+  onMacroChange,
+  onUnitsChange,
+  onGramsChange,
+  onDelete,
+}: IngredientTableRowProps) {
+  const foodQuery = useFood(ingredient.foodId);
+  const row = useMemo<IngredientRow | undefined>(() => {
+    if (!foodQuery.data) {
+      return undefined;
+    }
+
+    const grams = gramsForIngredient(ingredient, foodQuery.data);
+    const macros = calculateIngredientMacros(ingredient, foodQuery.data);
+    const units = foodQuery.data.portionWeight
+      ? ingredient.quantityType === 'portions'
+        ? ingredient.quantityValue
+        : Math.round((grams / foodQuery.data.portionWeight) * 100) / 100 || null
+      : null;
+
+    return {
+      ingredient,
+      food: foodQuery.data,
+      grams,
+      units,
+      macros,
+    };
+  }, [foodQuery.data, ingredient]);
+
+  const rowClassName = rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20';
+
+  if (!row) {
+    return (
+      <tr className={rowClassName}>
+        <td
+          className="px-3 py-4 text-[0.65rem] uppercase tracking-[0.3em] text-muted-foreground"
+          colSpan={totalTableColumns}
+        >
+          {foodQuery.isLoading ? 'Loading ingredient…' : 'Food not found'}
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className={rowClassName}>
+      <td className="p-0" style={{ width: columnWidths.food }}>
+        <FoodCell row={row} foods={foods} onRename={onRename} onSwap={onSwap} />
+      </td>
+      <td className="p-0" style={{ width: columnWidths.portionWeight }}>
+        <InlineInput
+          value={row.food.portionWeight ?? 0}
+          onCommit={(value) => onPortionWeight(row.food.id, value)}
+        />
+      </td>
+      {macroColumnHeaders.map(({ key }) => (
+        <td key={key} className="p-0" style={{ width: columnWidths.macro }}>
+          <InlineInput
+            value={row.food[macroFieldMap[key]]}
+            onCommit={(value) => onMacroChange(row.food.id, key, value)}
           />
-        ),
-      },
-      {
-        id: 'actions',
-        header: '',
-        meta: { width: columnWidths.actions },
-        cell: ({ row }) => (
-          <button
-            type="button"
-            onClick={() => handleDelete(row.original.ingredient.id)}
-            className="flex h-full w-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
-            aria-label="Remove ingredient"
-          >
-            <Trash2Icon className="size-4" />
-          </button>
-        ),
-      },
-    ],
-    [
-      foods,
-      handleDelete,
-      handleGramsChange,
-      handleMacroChange,
-      handlePortionWeight,
-      handleRename,
-      handleSwap,
-      handleUnitsChange,
-    ]
+        </td>
+      ))}
+      <td className="p-0" style={{ width: columnWidths.units }}>
+        {row.food.portionWeight ? (
+          <InlineInput
+            value={row.units ?? 0}
+            onCommit={(value) => onUnitsChange(row.ingredient.id, value)}
+          />
+        ) : (
+          <div className="flex h-12 w-full items-center px-3 text-sm text-muted-foreground">
+            —
+          </div>
+        )}
+      </td>
+      <td className="p-0" style={{ width: columnWidths.grams }}>
+        <InlineInput
+          value={row.grams ?? 0}
+          onCommit={(value) => onGramsChange(row.ingredient.id, value)}
+        />
+      </td>
+      <td className="p-0" style={{ width: columnWidths.actions }}>
+        <button
+          type="button"
+          onClick={() => onDelete(row.ingredient.id)}
+          className="flex h-full w-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+          aria-label="Remove ingredient"
+        >
+          <Trash2Icon className="size-4" />
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -460,45 +433,6 @@ function SuggestionButton({
       className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.55rem] font-semibold uppercase tracking-[0.3em] hover:bg-muted/60"
     >
       {children}
-    </button>
-  );
-}
-
-function EditableNumberCell({
-  value,
-  placeholder,
-  onCommit,
-  min,
-  step,
-  autoFocusOnEmpty,
-}: {
-  value: number | null;
-  placeholder: string;
-  onCommit: (value: number) => void;
-  min?: number;
-  step?: string;
-  autoFocusOnEmpty?: boolean;
-  allowEmptyClears?: boolean;
-}) {
-  const [editing, setEditing] = useState(autoFocusOnEmpty ? !value : false);
-
-  return editing ? (
-    <Input
-      type="number"
-      min={min}
-      step={step}
-      value={value ?? ''}
-      onChange={(event) => onCommit(Number(event.target.value))}
-      className="h-12 w-full border-0 px-3 text-xs"
-      autoFocus
-    />
-  ) : (
-    <button
-      type="button"
-      onClick={() => setEditing(true)}
-      className="flex h-12 w-full items-center px-3 text-left text-sm"
-    >
-      {value ? value : placeholder}
     </button>
   );
 }
