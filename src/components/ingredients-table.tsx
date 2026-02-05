@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Trash2Icon } from 'lucide-react';
@@ -13,7 +12,7 @@ import {
   macroKeys,
   recipeIngredientsCollection,
 } from '@/lib/db';
-import { useFood, useFoodItems, useRecipeIngredients } from '@/lib/db';
+import { useFood, useRecipeIngredients } from '@/lib/db';
 
 const macroFieldMap: Record<keyof MacroTotals, MacroFieldKey> = {
   calories: 'caloriesPer100g',
@@ -54,10 +53,8 @@ const totalTableColumns = macroKeys.length + 5;
 
 export function IngredientsTable({ recipeId }: { recipeId: string }) {
   const recipeIngredientsQuery = useRecipeIngredients(recipeId);
-  const foodsQuery = useFoodItems();
 
   const ingredients = recipeIngredientsQuery.data ?? [];
-  const foods = foodsQuery.data ?? [];
 
   const handleRename = useCallback((foodId: string, name: string) => {
     const nextName = name.trim();
@@ -68,19 +65,6 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
       draft.updatedAt = now;
     });
   }, []);
-
-  const handleSwap = useCallback(
-    (ingredient: RecipeIngredient, targetFoodId: string, grams: number) => {
-      const now = new Date().toISOString();
-      recipeIngredientsCollection.update(ingredient.id, (draft) => {
-        draft.foodId = targetFoodId;
-        draft.quantityType = 'grams';
-        draft.quantityValue = Math.max(1, Math.round(grams * 100) / 100);
-        draft.updatedAt = now;
-      });
-    },
-    []
-  );
 
   const handlePortionWeight = useCallback((foodId: string, weight?: number) => {
     const now = new Date().toISOString();
@@ -184,9 +168,7 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
               key={ingredient.id}
               ingredient={ingredient}
               rowIndex={index}
-              foods={foods}
               onRename={handleRename}
-              onSwap={handleSwap}
               onPortionWeight={handlePortionWeight}
               onMacroChange={handleMacroChange}
               onUnitsChange={handleUnitsChange}
@@ -209,13 +191,7 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
 type IngredientTableRowProps = {
   ingredient: RecipeIngredient;
   rowIndex: number;
-  foods: Array<FoodItem>;
   onRename: (foodId: string, name: string) => void;
-  onSwap: (
-    ingredient: RecipeIngredient,
-    targetFoodId: string,
-    grams: number
-  ) => void;
   onPortionWeight: (foodId: string, weight?: number) => void;
   onMacroChange: (
     foodId: string,
@@ -230,9 +206,7 @@ type IngredientTableRowProps = {
 function IngredientTableRow({
   ingredient,
   rowIndex,
-  foods,
   onRename,
-  onSwap,
   onPortionWeight,
   onMacroChange,
   onUnitsChange,
@@ -280,7 +254,7 @@ function IngredientTableRow({
   return (
     <tr className={rowClassName}>
       <td className="p-0" style={{ width: columnWidths.food }}>
-        <FoodCell row={row} foods={foods} onRename={onRename} onSwap={onSwap} />
+        <FoodCell row={row} onRename={onRename} />
       </td>
       <td className="p-0" style={{ width: columnWidths.portionWeight }}>
         <InlineInput
@@ -330,110 +304,41 @@ function IngredientTableRow({
 
 function FoodCell({
   row,
-  foods,
   onRename,
-  onSwap,
 }: {
   row: IngredientRow;
-  foods: Array<FoodItem>;
   onRename: (foodId: string, name: string) => void;
-  onSwap: (ingredient: RecipeIngredient, foodId: string, grams: number) => void;
 }) {
-  const [query, setQuery] = useState(row.food.name);
-  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(row.food.name);
+
   useEffect(() => {
-    setQuery(row.food.name);
+    setValue(row.food.name);
   }, [row.food.name]);
 
-  const normalized = query.trim().toLowerCase();
-  const renameAvailable =
-    normalized.length > 0 && normalized !== row.food.name.toLowerCase();
-
-  const matches = useMemo(() => {
-    if (!normalized.length)
-      return foods.filter((food) => food.id !== row.food.id);
-    return foods
-      .filter((food) =>
-        food.id === row.food.id
-          ? false
-          : food.name.toLowerCase().includes(normalized)
-      )
-      .slice(0, 6);
-  }, [foods, normalized, row.food.id]);
-
-  const handleSelect = (foodId: string) => {
-    onSwap(row.ingredient, foodId, row.grams);
-    setOpen(false);
-  };
-
-  const handleRename = () => {
-    onRename(row.food.id, query);
-    setOpen(false);
+  const handleCommit = () => {
+    const nextValue = value.trim();
+    if (!nextValue || nextValue === row.food.name) return;
+    onRename(row.food.id, nextValue);
   };
 
   return (
-    <div className="relative">
-      <Input
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => {
-          setTimeout(() => setOpen(false), 100);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && renameAvailable) {
-            event.preventDefault();
-            handleRename();
-          }
-        }}
-        className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
-      />
-
-      {open ? (
-        <div className="absolute left-0 right-0 top-full z-20 border border-border bg-background text-[0.65rem] uppercase tracking-[0.3em] shadow-lg">
-          {renameAvailable ? (
-            <SuggestionButton onSelect={handleRename}>
-              Rename to "{query.trim()}"
-            </SuggestionButton>
-          ) : null}
-          {matches.map((food) => (
-            <SuggestionButton
-              key={food.id}
-              onSelect={() => handleSelect(food.id)}
-            >
-              Swap to {food.name}
-            </SuggestionButton>
-          ))}
-          {!renameAvailable && matches.length === 0 ? (
-            <div className="px-3 py-2 text-muted-foreground">
-              Type to search
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SuggestionButton({
-  children,
-  onSelect,
-}: {
-  children: ReactNode;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onSelect}
-      className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.55rem] font-semibold uppercase tracking-[0.3em] hover:bg-muted/60"
-    >
-      {children}
-    </button>
+    <Input
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+      onBlur={handleCommit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          handleCommit();
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setValue(row.food.name);
+          event.currentTarget.blur();
+        }
+      }}
+      className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
+    />
   );
 }
 
