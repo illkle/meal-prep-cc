@@ -1,11 +1,21 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "MPCC",
+  "name": "Meal Prep Calories Calculator",
   "icons": [
     {
       "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
+      "sizes": "32x32",
       "type": "image/x-icon"
+    },
+    {
+      "src": "favicon-16x16.png",
+      "type": "image/png",
+      "sizes": "16x16"
+    },
+    {
+      "src": "favicon-32x32.png",
+      "type": "image/png",
+      "sizes": "32x32"
     },
     {
       "src": "logo192.png",
