@@ -25,14 +25,10 @@ function RecipePage() {
         portions={recipeQuery.data?.portionsPrepared ?? 1}
       />
 
-      <section className="flex flex-1 flex-col">
-        <div className="mt-6 ">
-          <IngredientsTable recipeId={recipeId} />
-        </div>
+      <section className="flex flex-1 flex-col gap-2 mt-2">
+        <AddIngredientButton recipeId={recipeId} />
 
-        <div className="mt-6">
-          <AddIngredientButton recipeId={recipeId} />
-        </div>
+        <IngredientsTable recipeId={recipeId} />
       </section>
     </>
   );

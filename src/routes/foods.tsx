@@ -33,7 +33,8 @@ function FoodsRoute() {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Filter foods"
-        className="h-16 w-full border-0 px-4 text-3xl font-semibold uppercase tracking-[0.35em] placeholder:text-muted-foreground/70 focus-visible:border-0 focus-visible:ring-0"
+        className="mb-2"
+        styling="largeSearch"
       />
 
       <section className="flex-1">

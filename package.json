@@ -45,6 +45,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^27.0.0",
     "oxfmt": "^0.28.0",
     "oxlint": "^1.43.0",

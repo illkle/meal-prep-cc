@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import type { Recipe } from '@/lib/db';
 import { recipesCollection } from '@/lib/db';
+import { XIcon } from 'lucide-react';
 
 export function RecipeHero({ recipe }: { recipe: Recipe }) {
   const handleNameCommit = useCallback(
@@ -36,23 +37,18 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
 
   return (
     <section className="">
-      <div className="flex flex-col  sm:flex-row ">
+      <div className="flex flex-col  sm:flex-row">
         <div className="flex w-full flex-1 flex-col gap-2">
-          <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">
-            Recipe Name
-          </label>
           <Input
             value={recipe?.name ?? ''}
             onChange={(event) => handleNameCommit(event.target.value)}
             disabled={!recipe}
-            className="h-14 w-full border border-border bg-transparent px-4 text-3xl font-semibold uppercase tracking-[0.35em]"
+            styling="largeSearch"
+            className=" border-r-0"
           />
         </div>
 
-        <div className="flex flex-col gap-2 sm:w-60">
-          <label className="text-[0.6rem] uppercase tracking-[0.5em] text-muted-foreground">
-            Portions Prepared
-          </label>
+        <div className="flex flex-col gap-1 sm:w-60 relative">
           <Input
             type="number"
             value={recipe?.portionsPrepared ?? 1}
@@ -62,8 +58,11 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
               handlePortionsCommit(Number(event.target.value))
             }
             disabled={!recipe}
-            className="h-14 border border-border border-l-0 px-4 text-3xl font-semibold uppercase tracking-[0.35em]"
+            styling="largeSearch"
           />
+          <span className="text-sm  text-muted-foreground absolute left-1 top-[calc(50%+1px)] -translate-y-1/2 z-2">
+            <XIcon size={10} />
+          </span>
         </div>
       </div>
     </section>

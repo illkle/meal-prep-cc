@@ -181,7 +181,9 @@ function IngredientSearchInput({
         <ComboboxInput
           placeholder="Search foods"
           showTrigger={false}
-          className="h-12 border-none px-0 [&_[data-slot=input-group-control]]:h-12 [&_[data-slot=input-group-control]]:px-3 [&_[data-slot=input-group-control]]:text-left [&_[data-slot=input-group-control]]:text-sm [&_[data-slot=input-group-control]]:font-semibold [&_[data-slot=input-group-control]]:uppercase [&_[data-slot=input-group-control]]:tracking-[0.3em]"
+          className={cn(
+            '[&_[data-slot=input-group-control]]:h-12 [&_[data-slot=input-group-control]]:px-3 [&_[data-slot=input-group-control]]:text-left [&_[data-slot=input-group-control]]:text-sm [&_[data-slot=input-group-control]]:font-semibold [&_[data-slot=input-group-control]]:uppercase [&_[data-slot=input-group-control]]:tracking-[0.3em]'
+          )}
         />
         <ComboboxContent className="border border-border text-[0.6rem] uppercase tracking-[0.3em]">
           {isLoading ? (

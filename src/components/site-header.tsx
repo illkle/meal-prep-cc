@@ -16,13 +16,13 @@ export function SiteHeader({ children, className }: SiteHeaderProps) {
         <div className="flex flex-1 flex-wrap items-center gap-6">
           <Link
             to="/"
-            className="text-3xl font-semibold uppercase tracking-[0.4em] text-foreground transition-colors hover:text-primary"
+            className="text-3xl font-semibold  text-foreground transition-colors hover:text-primary"
             preload="intent"
           >
-            Meal Prep
+            Meal Prep Cal Calc
           </Link>
 
-          <nav className="flex flex-wrap items-center gap-4 text-[0.55rem] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+          <nav className="flex justify-end items-end gap-4 text-xs  text-muted-foreground">
             <Link
               to="/"
               className="transition-colors hover:text-foreground"

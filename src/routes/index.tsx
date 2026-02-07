@@ -56,25 +56,27 @@ function HomeRoute() {
 
   return (
     <>
-      <section className="border-b border-border">
+      <section className="">
         <form onSubmit={onSubmit} className="flex flex-col sm:flex-row">
           <Input
             autoFocus
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Filter or name a recipe"
-            className="h-24 border-0 px-6 text-4xl font-semibold uppercase tracking-[0.35em] placeholder:text-muted-foreground/70 focus-visible:border-0 focus-visible:ring-0"
+            styling="largeSearch"
+            className="border-r-0"
           />
           <Button
             type="submit"
-            className="h-24 w-full border-t border-border px-8 text-2xl font-semibold uppercase tracking-[0.4em] transition-none sm:w-auto sm:border-l sm:border-t-0"
+            variant={'outline'}
+            className="w-full h-14  border-border px-8 font-semibold uppercase tracking-[0.4em] transition-none sm:w-auto sm:border-l "
           >
-            Add Recipe
+            Create New
           </Button>
         </form>
       </section>
 
-      <section className="flex flex-col divide-y divide-border">
+      <section className="flex flex-col border border-border mt-2">
         {hasResults ? (
           filteredRecipes.map((recipe) => (
             <Link
@@ -82,16 +84,10 @@ function HomeRoute() {
               to="/recipes/$recipeId"
               params={{ recipeId: recipe.id }}
               preload="intent"
-              className="group flex flex-col bg-background px-6 py-8 text-left transition-colors even:bg-muted/20 hover:bg-muted/60 focus-visible:bg-muted/60"
+              className="group flex items-center gap-4 h-12  bg-input/30 px-2 py-2 text-left transition-colors even:bg-muted/20 "
             >
-              <span className="text-3xl font-semibold uppercase tracking-[0.35em]">
+              <span className="uppercase tracking-widest font-semibold text-sm">
                 {recipe.name}
-              </span>
-              <span className="mt-4 text-xs uppercase tracking-[0.5em] text-muted-foreground">
-                Portions: {recipe.portionsPrepared}
-              </span>
-              <span className="text-[0.6rem] uppercase tracking-[0.6em] text-muted-foreground">
-                Updated {new Date(recipe.updatedAt).toLocaleDateString()}
               </span>
             </Link>
           ))
