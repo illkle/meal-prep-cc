@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FocusEvent, type KeyboardEvent } from 'react';
 
 import { Trash2Icon } from 'lucide-react';
 
@@ -8,12 +8,18 @@ type EditableTextCellInputProps = {
   value: string;
   onCommit: (value: string) => void;
   className?: string;
+  onEditorFocus?: (event: FocusEvent<HTMLInputElement>) => void;
+  onEditorBlur?: () => void;
+  onEditorKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function EditableTextCellInput({
   value,
   onCommit,
   className,
+  onEditorFocus,
+  onEditorBlur,
+  onEditorKeyDown,
 }: EditableTextCellInputProps) {
   const [draftValue, setDraftValue] = useState(value);
 
@@ -29,9 +35,14 @@ export function EditableTextCellInput({
 
   return (
     <Input
+      data-grid-editor="true"
       value={draftValue}
+      onFocus={onEditorFocus}
       onChange={(event) => setDraftValue(event.target.value)}
-      onBlur={handleCommit}
+      onBlur={() => {
+        handleCommit();
+        onEditorBlur?.();
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
@@ -43,6 +54,8 @@ export function EditableTextCellInput({
           setDraftValue(value);
           event.currentTarget.blur();
         }
+
+        onEditorKeyDown?.(event);
       }}
       className={className}
     />
@@ -53,18 +66,28 @@ type EditableNumberCellInputProps = {
   value: number;
   onCommit: (value: number) => void;
   className?: string;
+  onEditorFocus?: (event: FocusEvent<HTMLInputElement>) => void;
+  onEditorBlur?: () => void;
+  onEditorKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function EditableNumberCellInput({
   value,
   onCommit,
   className,
+  onEditorFocus,
+  onEditorBlur,
+  onEditorKeyDown,
 }: EditableNumberCellInputProps) {
   return (
     <Input
+      data-grid-editor="true"
       type="number"
       value={value}
+      onFocus={onEditorFocus}
       onChange={(event) => onCommit(Number(event.target.value))}
+      onBlur={onEditorBlur}
+      onKeyDown={onEditorKeyDown}
       className={className}
     />
   );

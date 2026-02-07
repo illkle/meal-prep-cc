@@ -2,6 +2,10 @@ import { useCallback, useMemo } from 'react';
 
 import { macroColumnHeaders } from '@/components/food-table-shared';
 import {
+  useTableKeyboardNavigation,
+  type TableKeyboardNavigation,
+} from '@/components/table-keyboard-navigation';
+import {
   EditableNumberCellInput,
   EditableTextCellInput,
   TableRowDeleteButton,
@@ -26,6 +30,14 @@ const columnWidths = {
   grams: '10%',
   actions: '6%',
 };
+
+const ingredientColumnIds = [
+  'food',
+  'portionWeight',
+  ...macroColumnHeaders.map(({ key }) => key),
+  'units',
+  'grams',
+];
 
 export type IngredientRow = {
   ingredient: RecipeIngredient;
@@ -72,8 +84,18 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
     recipeIngredientsCollection.delete(ingredientId);
   }, []);
 
+  const navigation = useTableKeyboardNavigation({
+    rowIds: ingredients.map((ingredient) => ingredient.id),
+    columnIds: ingredientColumnIds,
+  });
+
   return (
-    <div className="min-w-full rounded-none border border-border">
+    <div
+      ref={navigation.tableRef}
+      tabIndex={0}
+      className="min-w-full rounded-none border border-border outline-none"
+      {...navigation.tableInteractionProps}
+    >
       <table className="min-w-full table-fixed border-collapse text-left text-xs uppercase tracking-[0.2em]">
         <thead>
           <tr className="bg-muted/40">
@@ -125,6 +147,7 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
               onUnitsChange={handleUnitsChange}
               onGramsChange={handleGramsChange}
               onDelete={handleDelete}
+              navigation={navigation}
             />
           ))}
         </tbody>
@@ -152,6 +175,7 @@ type IngredientTableRowProps = {
   onUnitsChange: (ingredientId: string, nextValue: number) => void;
   onGramsChange: (ingredientId: string, nextValue: number) => void;
   onDelete: (ingredientId: string) => void;
+  navigation: TableKeyboardNavigation;
 };
 
 function IngredientTableRow({
@@ -163,6 +187,7 @@ function IngredientTableRow({
   onUnitsChange,
   onGramsChange,
   onDelete,
+  navigation,
 }: IngredientTableRowProps) {
   const foodQuery = useFood(ingredient.foodId);
   const row = useMemo<IngredientRow | undefined>(() => {
@@ -204,35 +229,91 @@ function IngredientTableRow({
 
   return (
     <tr className={rowClassName}>
-      <td className=" h-12" style={{ width: columnWidths.food }}>
+      <td
+        className=" h-12"
+        style={{ width: columnWidths.food }}
+        ref={navigation.registerCell({
+          rowId: row.ingredient.id,
+          colId: 'food',
+          editable: true,
+          editorType: 'text',
+        })}
+      >
         <EditableTextCellInput
           value={row.food.name}
           onCommit={(value) => onRename(row.food.id, value)}
           className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
+          {...navigation.getEditorHandlers(
+            {
+              rowId: row.ingredient.id,
+              colId: 'food',
+            },
+            { selectAllOnFocus: false }
+          )}
         />
       </td>
-      <td className=" h-12" style={{ width: columnWidths.portionWeight }}>
+      <td
+        className=" h-12"
+        style={{ width: columnWidths.portionWeight }}
+        ref={navigation.registerCell({
+          rowId: row.ingredient.id,
+          colId: 'portionWeight',
+          editable: true,
+          editorType: 'number',
+        })}
+      >
         <EditableNumberCellInput
           value={row.food.portionWeight ?? 0}
           onCommit={(value) => onPortionWeight(row.food.id, value)}
           className="h-12 w-full border-0 px-2 text-xs"
+          {...navigation.getEditorHandlers({
+            rowId: row.ingredient.id,
+            colId: 'portionWeight',
+          })}
         />
       </td>
       {macroColumnHeaders.map(({ key }) => (
-        <td key={key} className="h-12" style={{ width: columnWidths.macro }}>
+        <td
+          key={key}
+          className="h-12"
+          style={{ width: columnWidths.macro }}
+          ref={navigation.registerCell({
+            rowId: row.ingredient.id,
+            colId: key,
+            editable: true,
+            editorType: 'number',
+          })}
+        >
           <EditableNumberCellInput
             value={getFoodMacroValue(row.food, key)}
             onCommit={(value) => onMacroChange(row.food.id, key, value)}
             className="h-12 w-full border-0 px-2 text-xs"
+            {...navigation.getEditorHandlers({
+              rowId: row.ingredient.id,
+              colId: key,
+            })}
           />
         </td>
       ))}
-      <td className=" h-12" style={{ width: columnWidths.units }}>
+      <td
+        className=" h-12"
+        style={{ width: columnWidths.units }}
+        ref={navigation.registerCell({
+          rowId: row.ingredient.id,
+          colId: 'units',
+          editable: Boolean(row.food.portionWeight),
+          editorType: 'number',
+        })}
+      >
         {row.food.portionWeight ? (
           <EditableNumberCellInput
             value={row.units ?? 0}
             onCommit={(value) => onUnitsChange(row.ingredient.id, value)}
             className="h-12 w-full border-0 px-2 text-xs"
+            {...navigation.getEditorHandlers({
+              rowId: row.ingredient.id,
+              colId: 'units',
+            })}
           />
         ) : (
           <div className="flex h-12 w-full items-center px-3 text-sm text-muted-foreground">
@@ -240,11 +321,24 @@ function IngredientTableRow({
           </div>
         )}
       </td>
-      <td className="h-12" style={{ width: columnWidths.grams }}>
+      <td
+        className="h-12"
+        style={{ width: columnWidths.grams }}
+        ref={navigation.registerCell({
+          rowId: row.ingredient.id,
+          colId: 'grams',
+          editable: true,
+          editorType: 'number',
+        })}
+      >
         <EditableNumberCellInput
           value={row.grams ?? 0}
           onCommit={(value) => onGramsChange(row.ingredient.id, value)}
           className="h-12 w-full border-0 px-2 text-xs"
+          {...navigation.getEditorHandlers({
+            rowId: row.ingredient.id,
+            colId: 'grams',
+          })}
         />
       </td>
       <td className="h-12" style={{ width: columnWidths.actions }}>
