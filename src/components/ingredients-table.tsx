@@ -253,24 +253,24 @@ function IngredientTableRow({
 
   return (
     <tr className={rowClassName}>
-      <td className="p-0" style={{ width: columnWidths.food }}>
+      <td className=" h-12" style={{ width: columnWidths.food }}>
         <FoodCell row={row} onRename={onRename} />
       </td>
-      <td className="p-0" style={{ width: columnWidths.portionWeight }}>
+      <td className=" h-12" style={{ width: columnWidths.portionWeight }}>
         <InlineInput
           value={row.food.portionWeight ?? 0}
           onCommit={(value) => onPortionWeight(row.food.id, value)}
         />
       </td>
       {macroColumnHeaders.map(({ key }) => (
-        <td key={key} className="p-0" style={{ width: columnWidths.macro }}>
+        <td key={key} className="h-12" style={{ width: columnWidths.macro }}>
           <InlineInput
             value={row.food[macroFieldMap[key]]}
             onCommit={(value) => onMacroChange(row.food.id, key, value)}
           />
         </td>
       ))}
-      <td className="p-0" style={{ width: columnWidths.units }}>
+      <td className=" h-12" style={{ width: columnWidths.units }}>
         {row.food.portionWeight ? (
           <InlineInput
             value={row.units ?? 0}
@@ -282,17 +282,17 @@ function IngredientTableRow({
           </div>
         )}
       </td>
-      <td className="p-0" style={{ width: columnWidths.grams }}>
+      <td className="h-12" style={{ width: columnWidths.grams }}>
         <InlineInput
           value={row.grams ?? 0}
           onCommit={(value) => onGramsChange(row.ingredient.id, value)}
         />
       </td>
-      <td className="p-0" style={{ width: columnWidths.actions }}>
+      <td className="h-12" style={{ width: columnWidths.actions }}>
         <button
           type="button"
           onClick={() => onDelete(row.ingredient.id)}
-          className="flex h-full w-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+          className="flex flex-1 h-full w-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-destructive/40 "
           aria-label="Remove ingredient"
         >
           <Trash2Icon className="size-4" />

@@ -7,6 +7,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools';
 import { ThemeProvider } from '@/components/theme-provider';
 
 import appCss from '../styles.css?url';
+import { SiteHeader } from '@/components/site-header';
 
 export const Route = createRootRoute({
   head: () => ({
@@ -42,7 +43,13 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          {children}
+          <div className="flex min-h-screen flex-col bg-background text-foreground px-4">
+            <SiteHeader />
+
+            <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
+              {children}
+            </main>
+          </div>
           <TanStackDevtools
             config={{
               position: 'bottom-right',
