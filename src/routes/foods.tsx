@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 
 import { FoodsTable } from '@/components/foods-table';
 import { Input } from '@/components/ui/input';
@@ -29,27 +29,14 @@ function FoodsRoute() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 border-b border-border py-6">
-        <div className="flex flex-1 flex-col">
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter foods"
-            className="h-16 w-full border-0 px-4 text-3xl font-semibold uppercase tracking-[0.35em] placeholder:text-muted-foreground/70 focus-visible:border-0 focus-visible:ring-0"
-          />
-          <p className="mt-2 text-[0.6rem] uppercase tracking-[0.4em] text-muted-foreground">
-            Edit macros for any ingredient in one place
-          </p>
-        </div>
-        <Link
-          to="/"
-          className="hidden shrink-0 border border-border px-4 py-3 text-[0.55rem] font-semibold uppercase tracking-[0.35em] transition-colors hover:bg-muted/40 sm:inline-flex"
-        >
-          Back to recipes
-        </Link>
-      </div>
+      <Input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Filter foods"
+        className="h-16 w-full border-0 px-4 text-3xl font-semibold uppercase tracking-[0.35em] placeholder:text-muted-foreground/70 focus-visible:border-0 focus-visible:ring-0"
+      />
 
-      <section className="mt-8 flex-1">
+      <section className="flex-1">
         {hasResults ? (
           <FoodsTable foods={filteredFoods} />
         ) : (

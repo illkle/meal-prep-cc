@@ -11,7 +11,7 @@ type SiteHeaderProps = {
 
 export function SiteHeader({ children, className }: SiteHeaderProps) {
   return (
-    <header className={cn('bg-background text-foreground', className)}>
+    <header className={cn('bg-background text-foreground mb-4', className)}>
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-6 py-3">
         <div className="flex flex-1 flex-wrap items-center gap-6">
           <Link

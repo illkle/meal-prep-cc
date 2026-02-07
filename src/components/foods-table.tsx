@@ -5,7 +5,11 @@ import { Trash2Icon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { macroLabels } from '@/components/recipe-macro-summary';
 import type { FoodItem, MacroTotals } from '@/lib/db';
-import { foodItemsCollection, macroKeys, recipeIngredientsCollection } from '@/lib/db';
+import {
+  foodItemsCollection,
+  macroKeys,
+  recipeIngredientsCollection,
+} from '@/lib/db';
 
 type MacroFieldKey =
   | 'caloriesPer100g'
@@ -36,9 +40,9 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
   const sortedFoods = useMemo(
     () =>
       [...foods].sort((a, b) => {
-        const aDate = a.updatedAt ?? a.createdAt ?? '';
-        const bDate = b.updatedAt ?? b.createdAt ?? '';
-        return bDate.localeCompare(aDate);
+        const aName = a.name.toLowerCase() ?? 'Unnamed';
+        const bName = b.name.toLowerCase() ?? 'Unnamed';
+        return aName.localeCompare(bName);
       }),
     [foods]
   );
@@ -106,7 +110,11 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
               </div>
             </th>
             {macroColumnHeaders.map(({ key, label }) => (
-              <th key={key} className="p-0" style={{ width: columnWidths.macro }}>
+              <th
+                key={key}
+                className="p-0"
+                style={{ width: columnWidths.macro }}
+              >
                 <div className="px-3 py-2 text-[0.55rem] font-semibold text-muted-foreground">
                   {label}
                 </div>
@@ -146,7 +154,11 @@ type FoodRowProps = {
   rowIndex: number;
   onRename: (foodId: string, value: string) => void;
   onPortionWeight: (foodId: string, weight?: number) => void;
-  onMacroChange: (foodId: string, key: keyof MacroTotals, value: number) => void;
+  onMacroChange: (
+    foodId: string,
+    key: keyof MacroTotals,
+    value: number
+  ) => void;
   onDelete: (foodId: string) => void;
 };
 
