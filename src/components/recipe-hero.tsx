@@ -9,7 +9,8 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
   const handleNameCommit = useCallback(
     (name: string) => {
       const nextName = name.trim();
-      if (!nextName || nextName === recipe.name) return;
+
+      console.log('nextName', nextName);
       const now = new Date().toISOString();
       recipesCollection.update(recipe.id, (draft) => {
         draft.name = nextName;
@@ -40,9 +41,10 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
       <div className="flex flex-col  sm:flex-row">
         <div className="flex w-full flex-1 flex-col gap-2">
           <Input
-            value={recipe?.name ?? ''}
+            value={recipe?.name}
             onChange={(event) => handleNameCommit(event.target.value)}
             disabled={!recipe}
+            placeholder="Unnamed Recipe"
             styling="largeSearch"
             className=" border-r-0"
           />

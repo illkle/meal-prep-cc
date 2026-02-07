@@ -98,11 +98,10 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
           </tr>
         </thead>
         <tbody>
-          {sortedFoods.map((food, index) => (
+          {sortedFoods.map((food) => (
             <FoodRow
               key={food.id}
               food={food}
-              rowIndex={index}
               onRename={renameFoodItem}
               onPortionWeight={setFoodPortionWeight}
               onMacroChange={setFoodMacroValue}
@@ -124,7 +123,6 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
 
 type FoodRowProps = {
   food: FoodItem;
-  rowIndex: number;
   onRename: (foodId: string, value: string) => void;
   onPortionWeight: (foodId: string, weight?: number) => void;
   onMacroChange: (
@@ -138,17 +136,15 @@ type FoodRowProps = {
 
 function FoodRow({
   food,
-  rowIndex,
+
   onRename,
   onPortionWeight,
   onMacroChange,
   onDelete,
   navigation,
 }: FoodRowProps) {
-  const rowClassName = rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20';
-
   return (
-    <tr className={rowClassName}>
+    <tr className="bg-background even:bg-muted/20">
       <td
         className="h-12"
         style={{ width: columnWidths.food }}
@@ -161,6 +157,7 @@ function FoodRow({
       >
         <EditableTextCellInput
           value={food.name}
+          placeholder="Unnamed Food"
           onCommit={(value) => onRename(food.id, value)}
           className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
           {...navigation.getEditorHandlers(

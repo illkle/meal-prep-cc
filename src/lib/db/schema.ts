@@ -4,7 +4,7 @@ const timeStampSchema = z.string().min(1)
 
 export const foodItemSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
+  name: z.string(),
   caloriesPer100g: z.number().min(0),
   proteinPer100g: z.number().min(0),
   carbsPer100g: z.number().min(0),
@@ -17,7 +17,7 @@ export const foodItemSchema = z.object({
 
 export const recipeSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
+  name: z.string(),
   portionsPrepared: z.number().positive(),
   notes: z.string().optional(),
   createdAt: timeStampSchema,

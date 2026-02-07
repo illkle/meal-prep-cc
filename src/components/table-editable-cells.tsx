@@ -1,4 +1,9 @@
-import { useEffect, useState, type FocusEvent, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+} from 'react';
 
 import { Trash2Icon } from 'lucide-react';
 
@@ -11,10 +16,12 @@ type EditableTextCellInputProps = {
   onEditorFocus?: (event: FocusEvent<HTMLInputElement>) => void;
   onEditorBlur?: () => void;
   onEditorKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  placeholder?: string;
 };
 
 export function EditableTextCellInput({
   value,
+  placeholder,
   onCommit,
   className,
   onEditorFocus,
@@ -38,6 +45,7 @@ export function EditableTextCellInput({
       data-grid-editor="true"
       value={draftValue}
       onFocus={onEditorFocus}
+      placeholder={placeholder}
       onChange={(event) => setDraftValue(event.target.value)}
       onBlur={() => {
         handleCommit();

@@ -52,7 +52,7 @@ function RootDocument({ children }: { children: ReactNode }) {
           <div className="flex min-h-screen flex-col bg-background text-foreground px-4">
             <SiteHeader />
 
-            <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
+            <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col pb-6">
               {children}
             </main>
           </div>

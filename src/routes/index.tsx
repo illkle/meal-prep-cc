@@ -159,7 +159,7 @@ function RecipeNutritionRow({
       >
         <div className="col-span-2 min-w-0 sm:col-span-1">
           <p className="truncate text-sm font-semibold uppercase tracking-[0.2em]">
-            {recipe.name}
+            {recipe.name || 'Unnamed Recipe'}
           </p>
         </div>
 
