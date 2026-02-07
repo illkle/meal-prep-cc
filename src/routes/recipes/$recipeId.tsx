@@ -5,7 +5,7 @@ import { useFoodsInRecipe, useRecipe } from '@/lib/db';
 
 import { RecipeHero } from '@/components/recipe-hero';
 import { IngredientsTable } from '@/components/ingredients-table';
-import { AddIngredientButton } from '@/components/add-ingredient-button';
+import { IngredientLibrarySearch } from '@/components/add-ingredient';
 
 export const Route = createFileRoute('/recipes/$recipeId')({
   component: RecipePage,
@@ -26,7 +26,9 @@ function RecipePage() {
       />
 
       <section className="flex flex-1 flex-col gap-2 mt-2">
-        <AddIngredientButton recipeId={recipeId} />
+        <div className="flex items-center">
+          <IngredientLibrarySearch recipeId={recipeId} className="w-full" />
+        </div>
 
         <IngredientsTable recipeId={recipeId} />
       </section>

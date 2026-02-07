@@ -11,7 +11,7 @@ export const inputVariants = cva(
       styling: {
         default: '',
         largeSearch:
-          'border border-border h-14 px-6 text-4xl font-semibold uppercase tracking-[0.35em] placeholder:text-muted-foreground/70',
+          'border border-border h-14 px-3 text-4xl    placeholder:text-muted-foreground/70',
       },
     },
   }
