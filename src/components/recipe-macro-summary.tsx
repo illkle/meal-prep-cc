@@ -1,14 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { RefreshCcw } from 'lucide-react';
 
+import { formatMacroValue } from '@/lib/macro-formatters';
 import {
-  calculateIngredientMacros,
-  emptyMacroTotals,
   macroKeys,
-  perPortionMacros,
-  sumMacros,
   useFoodsInRecipe,
+  useRecipeNutrition,
   type MacroTotals,
 } from '@/lib/db';
 
@@ -19,14 +17,6 @@ export const macroLabels: Record<keyof MacroTotals, string> = {
   fat: 'Fat',
 };
 
-const macroFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 1,
-});
-
-const calorieFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 0,
-});
-
 export function RecipeMacroSummary({
   foodsInRecipeQuery,
   portions,
@@ -34,26 +24,10 @@ export function RecipeMacroSummary({
   foodsInRecipeQuery: ReturnType<typeof useFoodsInRecipe>;
   portions: number;
 }) {
-  const nutrition = useMemo(() => {
-    if (!foodsInRecipeQuery.data) {
-      return undefined;
-    }
-
-    const totals = sumMacros(
-      foodsInRecipeQuery.data.map(({ ingredient, food }) =>
-        calculateIngredientMacros(ingredient, food)
-      )
-    );
-
-    return {
-      totals,
-    };
-  }, [foodsInRecipeQuery.data]);
-
   const [primaryView, setPrimaryView] = useState<PrimaryView>('portion');
-  const portionCount = portions > 0 ? portions : 1;
-  const totals = nutrition?.totals ?? emptyMacroTotals;
-  const portionTotals = perPortionMacros(totals, portionCount);
+  const nutrition = useRecipeNutrition(foodsInRecipeQuery.data, portions);
+  const totals = nutrition.totals;
+  const portionTotals = nutrition.perPortion;
 
   return (
     <div className="">
@@ -140,10 +114,4 @@ function ViewToggleButton({ value, onToggle }: ViewToggleButtonProps) {
       <RefreshCcw className="pointer-events-none absolute inset-0 m-auto size-5 opacity-0 transition-opacity group-hover:opacity-120" />
     </button>
   );
-}
-
-function formatMacroValue(key: keyof MacroTotals, value: number) {
-  return key === 'calories'
-    ? calorieFormatter.format(value)
-    : macroFormatter.format(value);
 }

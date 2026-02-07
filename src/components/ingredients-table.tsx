@@ -1,25 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { Trash2Icon } from 'lucide-react';
-
-import { Input } from '@/components/ui/input';
-import { macroLabels } from '@/components/recipe-macro-summary';
+import { macroColumnHeaders } from '@/components/food-table-shared';
+import {
+  EditableNumberCellInput,
+  EditableTextCellInput,
+  TableRowDeleteButton,
+} from '@/components/table-editable-cells';
 import type { FoodItem, MacroTotals, RecipeIngredient } from '@/lib/db';
 import {
   calculateIngredientMacros,
-  foodItemsCollection,
+  getFoodMacroValue,
   gramsForIngredient,
-  macroKeys,
+  renameFoodItem,
   recipeIngredientsCollection,
+  setFoodMacroValue,
+  setFoodPortionWeight,
 } from '@/lib/db';
 import { useFood, useRecipeIngredients } from '@/lib/db';
-
-const macroFieldMap: Record<keyof MacroTotals, MacroFieldKey> = {
-  calories: 'caloriesPer100g',
-  protein: 'proteinPer100g',
-  carbs: 'carbsPer100g',
-  fat: 'fatPer100g',
-};
 
 const columnWidths = {
   food: '30%',
@@ -30,12 +27,6 @@ const columnWidths = {
   actions: '6%',
 };
 
-type MacroFieldKey =
-  | 'caloriesPer100g'
-  | 'proteinPer100g'
-  | 'carbsPer100g'
-  | 'fatPer100g';
-
 export type IngredientRow = {
   ingredient: RecipeIngredient;
   food: FoodItem;
@@ -44,52 +35,12 @@ export type IngredientRow = {
   macros: MacroTotals;
 };
 
-const macroColumnHeaders = macroKeys.map((key) => ({
-  key,
-  label: macroLabels[key],
-}));
-
-const totalTableColumns = macroKeys.length + 5;
+const totalTableColumns = macroColumnHeaders.length + 5;
 
 export function IngredientsTable({ recipeId }: { recipeId: string }) {
   const recipeIngredientsQuery = useRecipeIngredients(recipeId);
 
   const ingredients = recipeIngredientsQuery.data ?? [];
-
-  const handleRename = useCallback((foodId: string, name: string) => {
-    const nextName = name.trim();
-    if (!nextName) return;
-    const now = new Date().toISOString();
-    foodItemsCollection.update(foodId, (draft) => {
-      draft.name = nextName;
-      draft.updatedAt = now;
-    });
-  }, []);
-
-  const handlePortionWeight = useCallback((foodId: string, weight?: number) => {
-    const now = new Date().toISOString();
-    foodItemsCollection.update(foodId, (draft) => {
-      if (weight && weight > 0) {
-        draft.portionWeight = weight;
-      } else {
-        delete draft.portionWeight;
-      }
-      draft.updatedAt = now;
-    });
-  }, []);
-
-  const handleMacroChange = useCallback(
-    (foodId: string, key: keyof MacroTotals, value: number) => {
-      const sanitized = Number.isFinite(value) ? Math.max(0, value) : 0;
-      const now = new Date().toISOString();
-      const targetKey = macroFieldMap[key];
-      foodItemsCollection.update(foodId, (draft) => {
-        draft[targetKey] = sanitized;
-        draft.updatedAt = now;
-      });
-    },
-    []
-  );
 
   const handleUnitsChange = useCallback(
     (ingredientId: string, nextValue: number) => {
@@ -168,9 +119,9 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
               key={ingredient.id}
               ingredient={ingredient}
               rowIndex={index}
-              onRename={handleRename}
-              onPortionWeight={handlePortionWeight}
-              onMacroChange={handleMacroChange}
+              onRename={renameFoodItem}
+              onPortionWeight={setFoodPortionWeight}
+              onMacroChange={setFoodMacroValue}
               onUnitsChange={handleUnitsChange}
               onGramsChange={handleGramsChange}
               onDelete={handleDelete}
@@ -254,27 +205,34 @@ function IngredientTableRow({
   return (
     <tr className={rowClassName}>
       <td className=" h-12" style={{ width: columnWidths.food }}>
-        <FoodCell row={row} onRename={onRename} />
+        <EditableTextCellInput
+          value={row.food.name}
+          onCommit={(value) => onRename(row.food.id, value)}
+          className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
+        />
       </td>
       <td className=" h-12" style={{ width: columnWidths.portionWeight }}>
-        <InlineInput
+        <EditableNumberCellInput
           value={row.food.portionWeight ?? 0}
           onCommit={(value) => onPortionWeight(row.food.id, value)}
+          className="h-12 w-full border-0 px-2 text-xs"
         />
       </td>
       {macroColumnHeaders.map(({ key }) => (
         <td key={key} className="h-12" style={{ width: columnWidths.macro }}>
-          <InlineInput
-            value={row.food[macroFieldMap[key]]}
+          <EditableNumberCellInput
+            value={getFoodMacroValue(row.food, key)}
             onCommit={(value) => onMacroChange(row.food.id, key, value)}
+            className="h-12 w-full border-0 px-2 text-xs"
           />
         </td>
       ))}
       <td className=" h-12" style={{ width: columnWidths.units }}>
         {row.food.portionWeight ? (
-          <InlineInput
+          <EditableNumberCellInput
             value={row.units ?? 0}
             onCommit={(value) => onUnitsChange(row.ingredient.id, value)}
+            className="h-12 w-full border-0 px-2 text-xs"
           />
         ) : (
           <div className="flex h-12 w-full items-center px-3 text-sm text-muted-foreground">
@@ -283,78 +241,18 @@ function IngredientTableRow({
         )}
       </td>
       <td className="h-12" style={{ width: columnWidths.grams }}>
-        <InlineInput
+        <EditableNumberCellInput
           value={row.grams ?? 0}
           onCommit={(value) => onGramsChange(row.ingredient.id, value)}
+          className="h-12 w-full border-0 px-2 text-xs"
         />
       </td>
       <td className="h-12" style={{ width: columnWidths.actions }}>
-        <button
-          type="button"
-          onClick={() => onDelete(row.ingredient.id)}
-          className="flex flex-1 h-full w-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-destructive/40 "
-          aria-label="Remove ingredient"
-        >
-          <Trash2Icon className="size-4" />
-        </button>
+        <TableRowDeleteButton
+          onDelete={() => onDelete(row.ingredient.id)}
+          ariaLabel="Remove ingredient"
+        />
       </td>
     </tr>
-  );
-}
-
-function FoodCell({
-  row,
-  onRename,
-}: {
-  row: IngredientRow;
-  onRename: (foodId: string, name: string) => void;
-}) {
-  const [value, setValue] = useState(row.food.name);
-
-  useEffect(() => {
-    setValue(row.food.name);
-  }, [row.food.name]);
-
-  const handleCommit = () => {
-    const nextValue = value.trim();
-    if (!nextValue || nextValue === row.food.name) return;
-    onRename(row.food.id, nextValue);
-  };
-
-  return (
-    <Input
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={handleCommit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          handleCommit();
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          setValue(row.food.name);
-          event.currentTarget.blur();
-        }
-      }}
-      className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
-    />
-  );
-}
-
-function InlineInput({
-  value,
-  onCommit,
-}: {
-  value: number;
-  onCommit: (value: number) => void;
-}) {
-  return (
-    <Input
-      type="number"
-      value={value}
-      onChange={(event) => onCommit(Number(event.target.value))}
-      className="h-12 w-full border-0 px-2 text-xs"
-    />
   );
 }

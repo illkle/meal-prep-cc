@@ -1,4 +1,9 @@
+import { useMemo } from 'react'
+
 import { eq, useLiveQuery } from '@tanstack/react-db'
+
+import { calculateIngredientMacros, perPortionMacros, sumMacros } from './calculations'
+import { emptyMacroTotals, type FoodItem, type MacroTotals, type RecipeIngredient } from './schema'
 
 import { foodItemsCollection, recipeIngredientsCollection, recipesCollection } from './collections'
 
@@ -46,4 +51,39 @@ export function useFoodsInRecipe(recipeId: string) {
       .where(({ ingredient }) => eq(ingredient.recipeId, recipeId))
       .select(({ ingredient, food }) => ({ ingredient, food })),
   )
+}
+
+type FoodInRecipe = {
+  ingredient: RecipeIngredient
+  food: FoodItem
+}
+
+type RecipeNutrition = {
+  totals: MacroTotals
+  perPortion: MacroTotals
+}
+
+export function useRecipeNutrition(
+  foodsInRecipe: Array<FoodInRecipe> | undefined,
+  portions: number,
+): RecipeNutrition {
+  return useMemo(() => {
+    if (!foodsInRecipe) {
+      return {
+        totals: emptyMacroTotals,
+        perPortion: emptyMacroTotals,
+      }
+    }
+
+    const totals = sumMacros(
+      foodsInRecipe.map(({ ingredient, food }) =>
+        calculateIngredientMacros(ingredient, food),
+      ),
+    )
+
+    return {
+      totals,
+      perPortion: perPortionMacros(totals, portions > 0 ? portions : 1),
+    }
+  }, [foodsInRecipe, portions])
 }

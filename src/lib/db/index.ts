@@ -1,4 +1,6 @@
 export * from './calculations'
 export * from './collections'
+export * from './food-item-actions'
+export * from './food-macro-fields'
 export * from './hooks'
 export * from './schema'

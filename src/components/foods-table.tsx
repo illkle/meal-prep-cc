@@ -1,28 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { Trash2Icon } from 'lucide-react';
-
-import { Input } from '@/components/ui/input';
-import { macroLabels } from '@/components/recipe-macro-summary';
+import { macroColumnHeaders } from '@/components/food-table-shared';
+import {
+  EditableNumberCellInput,
+  EditableTextCellInput,
+  TableRowDeleteButton,
+} from '@/components/table-editable-cells';
 import type { FoodItem, MacroTotals } from '@/lib/db';
 import {
   foodItemsCollection,
-  macroKeys,
+  getFoodMacroValue,
   recipeIngredientsCollection,
+  renameFoodItem,
+  setFoodMacroValue,
+  setFoodPortionWeight,
 } from '@/lib/db';
-
-type MacroFieldKey =
-  | 'caloriesPer100g'
-  | 'proteinPer100g'
-  | 'carbsPer100g'
-  | 'fatPer100g';
-
-const macroFieldMap: Record<keyof MacroTotals, MacroFieldKey> = {
-  calories: 'caloriesPer100g',
-  protein: 'proteinPer100g',
-  carbs: 'carbsPer100g',
-  fat: 'fatPer100g',
-};
 
 const columnWidths = {
   food: '40%',
@@ -30,11 +22,6 @@ const columnWidths = {
   macro: '10%',
   actions: '8%',
 };
-
-const macroColumnHeaders = macroKeys.map((key) => ({
-  key,
-  label: macroLabels[key],
-}));
 
 export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
   const sortedFoods = useMemo(
@@ -45,41 +32,6 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
         return aName.localeCompare(bName);
       }),
     [foods]
-  );
-
-  const handleRename = useCallback((foodId: string, name: string) => {
-    const nextName = name.trim();
-    if (!nextName) return;
-    const now = new Date().toISOString();
-    foodItemsCollection.update(foodId, (draft) => {
-      draft.name = nextName;
-      draft.updatedAt = now;
-    });
-  }, []);
-
-  const handlePortionWeight = useCallback((foodId: string, weight?: number) => {
-    const now = new Date().toISOString();
-    foodItemsCollection.update(foodId, (draft) => {
-      if (weight && weight > 0) {
-        draft.portionWeight = weight;
-      } else {
-        delete draft.portionWeight;
-      }
-      draft.updatedAt = now;
-    });
-  }, []);
-
-  const handleMacroChange = useCallback(
-    (foodId: string, key: keyof MacroTotals, value: number) => {
-      const sanitized = Number.isFinite(value) ? Math.max(0, value) : 0;
-      const now = new Date().toISOString();
-      const targetKey = macroFieldMap[key];
-      foodItemsCollection.update(foodId, (draft) => {
-        draft[targetKey] = sanitized;
-        draft.updatedAt = now;
-      });
-    },
-    []
   );
 
   const handleDelete = useCallback((foodId: string) => {
@@ -131,9 +83,9 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
               key={food.id}
               food={food}
               rowIndex={index}
-              onRename={handleRename}
-              onPortionWeight={handlePortionWeight}
-              onMacroChange={handleMacroChange}
+              onRename={renameFoodItem}
+              onPortionWeight={setFoodPortionWeight}
+              onMacroChange={setFoodMacroValue}
               onDelete={handleDelete}
             />
           ))}
@@ -175,89 +127,34 @@ function FoodRow({
   return (
     <tr className={rowClassName}>
       <td className="h-12" style={{ width: columnWidths.food }}>
-        <FoodNameInput food={food} onRename={onRename} />
+        <EditableTextCellInput
+          value={food.name}
+          onCommit={(value) => onRename(food.id, value)}
+          className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
+        />
       </td>
       <td className="h-12" style={{ width: columnWidths.portionWeight }}>
-        <InlineNumberInput
+        <EditableNumberCellInput
           value={food.portionWeight ?? 0}
           onCommit={(value) => onPortionWeight(food.id, value)}
+          className="h-12 w-full border-0 px-2 text-xs"
         />
       </td>
       {macroColumnHeaders.map(({ key }) => (
         <td key={key} className="h-12" style={{ width: columnWidths.macro }}>
-          <InlineNumberInput
-            value={food[macroFieldMap[key]]}
+          <EditableNumberCellInput
+            value={getFoodMacroValue(food, key)}
             onCommit={(value) => onMacroChange(food.id, key, value)}
+            className="h-12 w-full border-0 px-2 text-xs"
           />
         </td>
       ))}
       <td className="h-12" style={{ width: columnWidths.actions }}>
-        <button
-          type="button"
-          onClick={() => onDelete(food.id)}
-          className="flex h-full w-full items-center justify-center px-2 text-muted-foreground transition-colors hover:bg-destructive/40"
-          aria-label="Remove food"
-        >
-          <Trash2Icon className="size-4" />
-        </button>
+        <TableRowDeleteButton
+          onDelete={() => onDelete(food.id)}
+          ariaLabel="Remove food"
+        />
       </td>
     </tr>
-  );
-}
-
-function FoodNameInput({
-  food,
-  onRename,
-}: {
-  food: FoodItem;
-  onRename: (foodId: string, name: string) => void;
-}) {
-  const [value, setValue] = useState(food.name);
-
-  useEffect(() => {
-    setValue(food.name);
-  }, [food.name]);
-
-  const handleCommit = () => {
-    const nextValue = value.trim();
-    if (!nextValue || nextValue === food.name) return;
-    onRename(food.id, nextValue);
-  };
-
-  return (
-    <Input
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={handleCommit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          handleCommit();
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          setValue(food.name);
-          event.currentTarget.blur();
-        }
-      }}
-      className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
-    />
-  );
-}
-
-function InlineNumberInput({
-  value,
-  onCommit,
-}: {
-  value: number;
-  onCommit: (value: number) => void;
-}) {
-  return (
-    <Input
-      type="number"
-      value={value}
-      onChange={(event) => onCommit(Number(event.target.value))}
-      className="h-12 w-full border-0 px-2 text-xs"
-    />
   );
 }

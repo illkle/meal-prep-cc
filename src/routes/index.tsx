@@ -3,12 +3,28 @@ import { useMemo, useState } from 'react';
 
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 
-import type { Recipe } from '@/lib/db';
-import { recipesCollection, useRecipes } from '@/lib/db';
+import { formatMacroValue, macroFormatter } from '@/lib/macro-formatters';
+import type { MacroTotals, Recipe } from '@/lib/db';
+import {
+  macroKeys,
+  recipeIngredientsCollection,
+  recipesCollection,
+  useFoodsInRecipe,
+  useRecipeNutrition,
+  useRecipes,
+} from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TableRowDeleteButton } from '@/components/table-editable-cells';
 
 export const Route = createFileRoute('/')({ component: HomeRoute });
+
+const macroColumnLabels: Record<keyof MacroTotals, string> = {
+  calories: 'Calories',
+  protein: 'Protein',
+  carbs: 'Carbs',
+  fat: 'Fat',
+};
 
 function HomeRoute() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +67,18 @@ function HomeRoute() {
     handleCreateRecipe();
   };
 
+  const handleDeleteRecipe = (recipeId: string) => {
+    const ingredientIds = Array.from(recipeIngredientsCollection.values())
+      .filter((ingredient) => ingredient.recipeId === recipeId)
+      .map((ingredient) => ingredient.id);
+
+    if (ingredientIds.length) {
+      recipeIngredientsCollection.delete(ingredientIds);
+    }
+
+    recipesCollection.delete(recipeId);
+  };
+
   const hasRecipes = recipes.length > 0;
   const hasResults = filteredRecipes.length > 0;
 
@@ -76,21 +104,26 @@ function HomeRoute() {
         </form>
       </section>
 
-      <section className="flex flex-col border border-border mt-2">
+      <section className="flex flex-col mt-2 border border-border ">
         {hasResults ? (
-          filteredRecipes.map((recipe) => (
-            <Link
-              key={recipe.id}
-              to="/recipes/$recipeId"
-              params={{ recipeId: recipe.id }}
-              preload="intent"
-              className="group flex items-center gap-4 h-12  bg-input/30 px-2 py-2 text-left transition-colors even:bg-muted/20 "
-            >
-              <span className="uppercase tracking-widest font-semibold text-sm">
-                {recipe.name}
-              </span>
-            </Link>
-          ))
+          <>
+            <div className="hidden items-center gap-2  bg-muted/40 px-3 py-2 text-[0.55rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,2.2fr)_minmax(80px,0.8fr)_repeat(4,minmax(64px,1fr))_40px]">
+              <span>Recipe</span>
+              <span>Portions</span>
+              {macroKeys.map((key) => (
+                <span key={key}>{macroColumnLabels[key]}</span>
+              ))}
+              <span />
+            </div>
+
+            {filteredRecipes.map((recipe) => (
+              <RecipeNutritionRow
+                key={recipe.id}
+                recipe={recipe}
+                onDelete={handleDeleteRecipe}
+              />
+            ))}
+          </>
         ) : (
           <div className="px-6 py-20 text-center text-2xl font-semibold uppercase tracking-[0.5em] text-muted-foreground">
             {hasRecipes
@@ -100,5 +133,67 @@ function HomeRoute() {
         )}
       </section>
     </>
+  );
+}
+
+function RecipeNutritionRow({
+  recipe,
+  onDelete,
+}: {
+  recipe: Recipe;
+  onDelete: (recipeId: string) => void;
+}) {
+  const foodsInRecipeQuery = useFoodsInRecipe(recipe.id);
+  const nutrition = useRecipeNutrition(
+    foodsInRecipeQuery.data,
+    recipe.portionsPrepared
+  );
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_40px] items-stretch border-b border-border last:border-b-0 bg-input/30 even:bg-muted/20 hover:bg-muted/40">
+      <Link
+        to="/recipes/$recipeId"
+        params={{ recipeId: recipe.id }}
+        preload="intent"
+        className="grid grid-cols-2 gap-2 px-3 py-3 text-left sm:grid-cols-[minmax(0,2.2fr)_minmax(80px,0.8fr)_repeat(4,minmax(64px,1fr))] sm:items-center sm:gap-3 sm:py-2"
+      >
+        <div className="col-span-2 min-w-0 sm:col-span-1">
+          <p className="truncate text-sm font-semibold uppercase tracking-[0.2em]">
+            {recipe.name}
+          </p>
+        </div>
+
+        <MacroCell
+          label="Portions"
+          value={macroFormatter.format(recipe.portionsPrepared)}
+        />
+
+        {macroKeys.map((key) => (
+          <MacroCell
+            key={key}
+            label={macroColumnLabels[key]}
+            value={formatMacroValue(key, nutrition.perPortion[key])}
+          />
+        ))}
+      </Link>
+
+      <TableRowDeleteButton
+        onDelete={() => onDelete(recipe.id)}
+        ariaLabel="Remove recipe"
+      />
+    </div>
+  );
+}
+
+function MacroCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[0.55rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground sm:hidden">
+        {label}
+      </p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] sm:text-[0.7rem]">
+        {value}
+      </p>
+    </div>
   );
 }

@@ -150,6 +150,7 @@ export function IngredientLibrarySearch({
       items={options}
       mode="none"
       value={query}
+      autoHighlight
       onValueChange={handleQueryChange}
       itemToStringValue={(item) =>
         item.type === 'food' ? item.value.name : item.value
@@ -162,21 +163,6 @@ export function IngredientLibrarySearch({
       <Autocomplete.Input
         placeholder="Search food library or create"
         className={cn(inputVariants({ styling: 'largeSearch' }), className)}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter') return;
-
-          const highlightedItem = highlightedItemRef.current;
-          if (highlightedItem) {
-            event.preventDefault();
-            handleSelectOption(highlightedItem);
-            return;
-          }
-
-          if (!isCreateDisabled) {
-            event.preventDefault();
-            createFoodAndAddToRecipe(query);
-          }
-        }}
       />
 
       <Autocomplete.Portal>
