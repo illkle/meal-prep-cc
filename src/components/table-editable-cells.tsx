@@ -8,6 +8,7 @@ import {
 import { Trash2Icon } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
+import { useLinkedValue } from '@/lib/useDbLinkedValue';
 
 type EditableTextCellInputProps = {
   value: string;
@@ -70,15 +71,6 @@ export function EditableTextCellInput({
   );
 }
 
-type EditableNumberCellInputProps = {
-  value: number;
-  onCommit: (value: number) => void;
-  className?: string;
-  onEditorFocus?: (event: FocusEvent<HTMLInputElement>) => void;
-  onEditorBlur?: () => void;
-  onEditorKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
-};
-
 export function EditableNumberCellInput({
   value,
   onCommit,
@@ -86,14 +78,31 @@ export function EditableNumberCellInput({
   onEditorFocus,
   onEditorBlur,
   onEditorKeyDown,
-}: EditableNumberCellInputProps) {
+  dbTimestamp,
+}: {
+  value: number;
+  onCommit: (value: number, timestamp: number) => void;
+  className?: string;
+  onEditorFocus?: (event: FocusEvent<HTMLInputElement>) => void;
+  onEditorBlur?: () => void;
+  onEditorKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  dbTimestamp: Date;
+}) {
+  const { internalValue, updateHandler } = useLinkedValue({
+    value: String(value),
+    onChange: (v, timestamp) => onCommit(Number(v), timestamp),
+    timestamp: dbTimestamp?.getTime() || 0,
+    validate: (v) => Number.isFinite(Number(v)) && Number(v) >= 0,
+    throttleTime: 300,
+  });
+
   return (
     <Input
       data-grid-editor="true"
       type="number"
-      value={value}
+      value={internalValue}
       onFocus={onEditorFocus}
-      onChange={(event) => onCommit(Number(event.target.value))}
+      onChange={(event) => updateHandler(event.target.value)}
       onBlur={onEditorBlur}
       onKeyDown={onEditorKeyDown}
       className={className}

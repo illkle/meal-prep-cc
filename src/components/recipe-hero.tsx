@@ -4,37 +4,35 @@ import { Input } from '@/components/ui/input';
 import type { Recipe } from '@/lib/db';
 import { recipesCollection } from '@/lib/db';
 import { XIcon } from 'lucide-react';
+import { useLinkedValue } from '@/lib/useDbLinkedValue';
 
 export function RecipeHero({ recipe }: { recipe: Recipe }) {
   const handleNameCommit = useCallback(
     (name: string) => {
-      const nextName = name.trim();
-
-      console.log('nextName', nextName);
-      const now = new Date().toISOString();
       recipesCollection.update(recipe.id, (draft) => {
-        draft.name = nextName;
-        draft.updatedAt = now;
+        draft.name = name;
+        draft.updatedAt = new Date().getTime();
       });
     },
     [recipe]
   );
 
   const handlePortionsCommit = useCallback(
-    (portions: number) => {
-      const nextValue = Number(portions);
-      if (!Number.isFinite(nextValue) || nextValue <= 0) {
-        return;
-      }
-      if (nextValue === recipe.portionsPrepared) return;
-      const now = new Date().toISOString();
+    (portions: string, timestamp: number) => {
       recipesCollection.update(recipe.id, (draft) => {
-        draft.portionsPrepared = nextValue;
-        draft.updatedAt = now;
+        draft.portionsPrepared = Number(portions);
+        draft.updatedAt = timestamp;
       });
     },
     [recipe]
   );
+
+  const { internalValue, updateHandler } = useLinkedValue({
+    value: String(recipe.portionsPrepared),
+    onChange: handlePortionsCommit,
+    timestamp: recipe.updatedAt,
+    validate: (v) => Number.isFinite(Number(v)) && Number(v) > 0,
+  });
 
   return (
     <section className="">
@@ -53,13 +51,12 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
         <div className="flex flex-col gap-1 sm:w-60 relative">
           <Input
             type="number"
-            value={recipe?.portionsPrepared ?? 1}
+            value={internalValue}
             min={1}
             step={1}
-            onChange={(event) =>
-              handlePortionsCommit(Number(event.target.value))
-            }
+            onChange={(event) => updateHandler(event.target.value)}
             disabled={!recipe}
+            className="pl-4"
             styling="largeSearch"
           />
           <span className="text-sm  text-muted-foreground absolute left-1 top-[calc(50%+1px)] -translate-y-1/2 z-2">

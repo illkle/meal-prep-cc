@@ -8,7 +8,7 @@ import { emptyMacroTotals, type FoodItem, type MacroTotals, type RecipeIngredien
 import { foodItemsCollection, recipeIngredientsCollection, recipesCollection } from './collections'
 
 export function useFoodItems() {
-  return useLiveQuery(() => foodItemsCollection)
+  return useLiveQuery((q) => q.from({ food: foodItemsCollection }).orderBy(({ food }) => food.name))
 }
 
 export function useFood(foodId: string) {
@@ -21,7 +21,9 @@ export function useFood(foodId: string) {
 }
 
 export function useRecipes() {
-  return useLiveQuery(() => recipesCollection)
+  return useLiveQuery((q) =>
+    q.from({ recipe: recipesCollection }).orderBy(({ recipe }) => recipe.name),
+  )
 }
 
 export function useRecipe(recipeId: string) {
@@ -76,9 +78,7 @@ export function useRecipeNutrition(
     }
 
     const totals = sumMacros(
-      foodsInRecipe.map(({ ingredient, food }) =>
-        calculateIngredientMacros(ingredient, food),
-      ),
+      foodsInRecipe.map(({ ingredient, food }) => calculateIngredientMacros(ingredient, food)),
     )
 
     return {

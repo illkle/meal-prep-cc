@@ -55,26 +55,32 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
   const ingredients = recipeIngredientsQuery.data ?? [];
 
   const handleUnitsChange = useCallback(
-    (ingredientId: string, nextValue: number) => {
+    (
+      ingredientId: string,
+      nextValue: number,
+      timestamp: number = new Date().getTime()
+    ) => {
       if (!Number.isFinite(nextValue) || nextValue <= 0) return;
-      const now = new Date().toISOString();
       recipeIngredientsCollection.update(ingredientId, (draft) => {
         draft.quantityType = 'portions';
         draft.quantityValue = nextValue;
-        draft.updatedAt = now;
+        draft.updatedAt = timestamp;
       });
     },
     []
   );
 
   const handleGramsChange = useCallback(
-    (ingredientId: string, nextValue: number) => {
+    (
+      ingredientId: string,
+      nextValue: number,
+      timestamp: number = new Date().getTime()
+    ) => {
       if (!Number.isFinite(nextValue) || nextValue <= 0) return;
-      const now = new Date().toISOString();
       recipeIngredientsCollection.update(ingredientId, (draft) => {
         draft.quantityType = 'grams';
         draft.quantityValue = nextValue;
-        draft.updatedAt = now;
+        draft.updatedAt = timestamp;
       });
     },
     []
@@ -166,14 +172,23 @@ type IngredientTableRowProps = {
   ingredient: RecipeIngredient;
   rowIndex: number;
   onRename: (foodId: string, name: string) => void;
-  onPortionWeight: (foodId: string, weight?: number) => void;
+  onPortionWeight: (foodId: string, weight: number, timestamp: number) => void;
   onMacroChange: (
     foodId: string,
     key: keyof MacroTotals,
-    value: number
+    value: number,
+    timestamp: number
   ) => void;
-  onUnitsChange: (ingredientId: string, nextValue: number) => void;
-  onGramsChange: (ingredientId: string, nextValue: number) => void;
+  onUnitsChange: (
+    ingredientId: string,
+    nextValue: number,
+    timestamp: number
+  ) => void;
+  onGramsChange: (
+    ingredientId: string,
+    nextValue: number,
+    timestamp: number
+  ) => void;
   onDelete: (ingredientId: string) => void;
   navigation: TableKeyboardNavigation;
 };
@@ -264,8 +279,11 @@ function IngredientTableRow({
       >
         <EditableNumberCellInput
           value={row.food.portionWeight ?? 0}
-          onCommit={(value) => onPortionWeight(row.food.id, value)}
+          onCommit={(value, timestamp) =>
+            onPortionWeight(row.food.id, value, timestamp)
+          }
           className="h-12 w-full border-0 px-2 text-xs"
+          dbTimestamp={new Date(row.ingredient.updatedAt)}
           {...navigation.getEditorHandlers({
             rowId: row.ingredient.id,
             colId: 'portionWeight',
@@ -286,7 +304,10 @@ function IngredientTableRow({
         >
           <EditableNumberCellInput
             value={getFoodMacroValue(row.food, key)}
-            onCommit={(value) => onMacroChange(row.food.id, key, value)}
+            onCommit={(value, timestamp) =>
+              onMacroChange(row.food.id, key, value, timestamp)
+            }
+            dbTimestamp={new Date(row.food.updatedAt)}
             className="h-12 w-full border-0 px-2 text-xs"
             {...navigation.getEditorHandlers({
               rowId: row.ingredient.id,
@@ -308,8 +329,11 @@ function IngredientTableRow({
         {row.food.portionWeight ? (
           <EditableNumberCellInput
             value={row.units ?? 0}
-            onCommit={(value) => onUnitsChange(row.ingredient.id, value)}
+            onCommit={(value, timestamp) =>
+              onUnitsChange(row.ingredient.id, value, timestamp)
+            }
             className="h-12 w-full border-0 px-2 text-xs"
+            dbTimestamp={new Date(row.ingredient.updatedAt)}
             {...navigation.getEditorHandlers({
               rowId: row.ingredient.id,
               colId: 'units',
@@ -333,8 +357,11 @@ function IngredientTableRow({
       >
         <EditableNumberCellInput
           value={row.grams ?? 0}
-          onCommit={(value) => onGramsChange(row.ingredient.id, value)}
+          onCommit={(value, timestamp) =>
+            onGramsChange(row.ingredient.id, value, timestamp)
+          }
           className="h-12 w-full border-0 px-2 text-xs"
+          dbTimestamp={new Date(row.ingredient.updatedAt)}
           {...navigation.getEditorHandlers({
             rowId: row.ingredient.id,
             colId: 'grams',

@@ -1,6 +1,21 @@
 import { z } from 'zod'
 
-const timeStampSchema = z.string().min(1)
+const toNumberTimestamp = (val: unknown) => {
+  if (typeof val === 'number') {
+    return val
+  }
+  if (typeof val === 'string') {
+    return new Date(val).getTime()
+  }
+
+  try {
+    return new Date(val as string | number).getTime()
+  } catch {
+    return new Date().getTime()
+  }
+}
+
+const timeStampSchema = z.preprocess(toNumberTimestamp, z.number())
 
 export const foodItemSchema = z.object({
   id: z.string().min(1),
