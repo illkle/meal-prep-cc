@@ -58,12 +58,14 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
     (
       ingredientId: string,
       nextValue: number,
+      portionWeight: number,
       timestamp: number = new Date().getTime()
     ) => {
       if (!Number.isFinite(nextValue) || nextValue <= 0) return;
+      if (!Number.isFinite(portionWeight) || portionWeight <= 0) return;
+
       recipeIngredientsCollection.update(ingredientId, (draft) => {
-        draft.quantityType = 'portions';
-        draft.quantityValue = nextValue;
+        draft.quantityValue = nextValue * portionWeight;
         draft.updatedAt = timestamp;
       });
     },
@@ -78,7 +80,6 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
     ) => {
       if (!Number.isFinite(nextValue) || nextValue <= 0) return;
       recipeIngredientsCollection.update(ingredientId, (draft) => {
-        draft.quantityType = 'grams';
         draft.quantityValue = nextValue;
         draft.updatedAt = timestamp;
       });
@@ -182,6 +183,7 @@ type IngredientTableRowProps = {
   onUnitsChange: (
     ingredientId: string,
     nextValue: number,
+    portionWeight: number,
     timestamp: number
   ) => void;
   onGramsChange: (
@@ -210,12 +212,10 @@ function IngredientTableRow({
       return undefined;
     }
 
-    const grams = gramsForIngredient(ingredient, foodQuery.data);
+    const grams = gramsForIngredient(ingredient);
     const macros = calculateIngredientMacros(ingredient, foodQuery.data);
     const units = foodQuery.data.portionWeight
-      ? ingredient.quantityType === 'portions'
-        ? ingredient.quantityValue
-        : Math.round((grams / foodQuery.data.portionWeight) * 100) / 100 || null
+      ? Math.round((grams / foodQuery.data.portionWeight) * 100) / 100 || null
       : null;
 
     return {
@@ -283,7 +283,7 @@ function IngredientTableRow({
             onPortionWeight(row.food.id, value, timestamp)
           }
           className="h-12 w-full border-0 px-2 text-xs"
-          dbTimestamp={new Date(row.ingredient.updatedAt)}
+          dbTimestamp={new Date(row.food.updatedAt)}
           {...navigation.getEditorHandlers({
             rowId: row.ingredient.id,
             colId: 'portionWeight',
@@ -330,10 +330,17 @@ function IngredientTableRow({
           <EditableNumberCellInput
             value={row.units ?? 0}
             onCommit={(value, timestamp) =>
-              onUnitsChange(row.ingredient.id, value, timestamp)
+              onUnitsChange(
+                row.ingredient.id,
+                value,
+                row.food.portionWeight!,
+                timestamp
+              )
             }
             className="h-12 w-full border-0 px-2 text-xs"
-            dbTimestamp={new Date(row.ingredient.updatedAt)}
+            dbTimestamp={new Date(
+              Math.max(row.ingredient.updatedAt, row.food.updatedAt)
+            )}
             {...navigation.getEditorHandlers({
               rowId: row.ingredient.id,
               colId: 'units',

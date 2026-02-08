@@ -37,7 +37,6 @@ export function IngredientLibrarySearch({
         id: crypto.randomUUID(),
         recipeId,
         foodId,
-        quantityType: 'grams',
         quantityValue: 100,
         createdAt: now,
         updatedAt: now,

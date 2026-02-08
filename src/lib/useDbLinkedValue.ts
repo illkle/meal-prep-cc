@@ -22,7 +22,7 @@ export const useLinkedValue = <T>({
 }: {
   value: T
   onChange: (v: T, timestamp: number) => void | Promise<void>
-  validate?: (v: T) => boolean
+  validate?: (v: T) => T | null
   timestamp?: number
   alwaysUpdate?: boolean
   throttleTime?: number
@@ -63,11 +63,14 @@ export const useLinkedValue = <T>({
   const updateHandler = useCallback(
     async (v: T) => {
       setInternalValue(v)
-      if (!validate || validate(v)) {
+
+      const validatedValue = validate ? validate(v) : v
+
+      if (validatedValue != null) {
         const nextTimestamp = Date.now()
         updateInternalTimestamp(nextTimestamp)
-        await debouncedOnChange(v, nextTimestamp)
-        setInternalValueValidated(v)
+        await debouncedOnChange(validatedValue, nextTimestamp)
+        setInternalValueValidated(validatedValue)
       }
     },
     [debouncedOnChange, updateInternalTimestamp, validate],

@@ -22,11 +22,7 @@ export function setFoodPortionWeight(
   timestamp: number = new Date().getTime(),
 ) {
   foodItemsCollection.update(foodId, (draft) => {
-    if (weight && weight > 0) {
-      draft.portionWeight = weight
-    } else {
-      delete draft.portionWeight
-    }
+    draft.portionWeight = Math.max(0, weight ?? 0)
     draft.updatedAt = timestamp
   })
 }

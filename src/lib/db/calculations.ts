@@ -9,24 +9,15 @@ export const macroKeys: Array<keyof MacroTotals> = [
 
 export function gramsForIngredient(
   ingredient: RecipeIngredient,
-  food: FoodItem,
 ): number {
-  if (ingredient.quantityType === 'grams') {
-    return ingredient.quantityValue
-  }
-
-  if (!food.portionWeight) {
-    return 0
-  }
-
-  return ingredient.quantityValue * food.portionWeight
+  return ingredient.quantityValue
 }
 
 export function calculateIngredientMacros(
   ingredient: RecipeIngredient,
   food: FoodItem,
 ): MacroTotals {
-  const grams = gramsForIngredient(ingredient, food)
+  const grams = gramsForIngredient(ingredient)
   const factor = grams / 100
 
   return {

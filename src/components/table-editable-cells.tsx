@@ -92,7 +92,13 @@ export function EditableNumberCellInput({
     value: String(value),
     onChange: (v, timestamp) => onCommit(Number(v), timestamp),
     timestamp: dbTimestamp?.getTime() || 0,
-    validate: (v) => Number.isFinite(Number(v)) && Number(v) >= 0,
+    validate: (v) => {
+      const asNum = Number(v);
+      if (!Number.isFinite(asNum) || asNum < 0) {
+        return '0';
+      }
+      return v;
+    },
     throttleTime: 300,
   });
 
