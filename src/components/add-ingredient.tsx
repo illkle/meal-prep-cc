@@ -3,6 +3,7 @@ import { Autocomplete } from '@base-ui/react/autocomplete';
 
 import {
   foodItemsCollection,
+  getNextRecipeIngredientSortOrder,
   recipeIngredientsCollection,
   type FoodItem,
   useFoodItems,
@@ -37,6 +38,7 @@ export function IngredientLibrarySearch({
         id: crypto.randomUUID(),
         recipeId,
         foodId,
+        sortOrder: getNextRecipeIngredientSortOrder(recipeId),
         quantityValue: 100,
         createdAt: now,
         updatedAt: now,

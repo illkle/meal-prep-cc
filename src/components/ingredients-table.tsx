@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { ChevronDownIcon, ChevronUpIcon, Trash2Icon } from 'lucide-react';
 
 import { macroColumnHeaders } from '@/components/food-table-shared';
 import {
@@ -8,17 +9,18 @@ import {
 import {
   EditableNumberCellInput,
   EditableTextCellInput,
-  TableRowDeleteButton,
 } from '@/components/table-editable-cells';
 import type { FoodItem, MacroTotals, RecipeIngredient } from '@/lib/db';
 import {
   calculateIngredientMacros,
   getFoodMacroValue,
   gramsForIngredient,
+  moveRecipeIngredient,
   renameFoodItem,
   recipeIngredientsCollection,
   setFoodMacroValue,
   setFoodPortionWeight,
+  sortRecipeIngredientsForDisplay,
 } from '@/lib/db';
 import { useFood, useRecipeIngredients } from '@/lib/db';
 
@@ -28,7 +30,7 @@ const columnWidths = {
   macro: '7%',
   units: '8%',
   grams: '10%',
-  actions: '6%',
+  actions: '12%',
 };
 
 const ingredientColumnIds = [
@@ -53,6 +55,10 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
   const recipeIngredientsQuery = useRecipeIngredients(recipeId);
 
   const ingredients = recipeIngredientsQuery.data ?? [];
+  const sortedIngredients = useMemo(
+    () => sortRecipeIngredientsForDisplay(ingredients),
+    [ingredients]
+  );
 
   const handleUnitsChange = useCallback(
     (
@@ -91,8 +97,22 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
     recipeIngredientsCollection.delete(ingredientId);
   }, []);
 
+  const handleMoveUp = useCallback(
+    (ingredientId: string) => {
+      moveRecipeIngredient(recipeId, ingredientId, 'up');
+    },
+    [recipeId]
+  );
+
+  const handleMoveDown = useCallback(
+    (ingredientId: string) => {
+      moveRecipeIngredient(recipeId, ingredientId, 'down');
+    },
+    [recipeId]
+  );
+
   const navigation = useTableKeyboardNavigation({
-    rowIds: ingredients.map((ingredient) => ingredient.id),
+    rowIds: sortedIngredients.map((ingredient) => ingredient.id),
     columnIds: ingredientColumnIds,
   });
 
@@ -143,16 +163,20 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
           </tr>
         </thead>
         <tbody>
-          {ingredients.map((ingredient, index) => (
+          {sortedIngredients.map((ingredient, index) => (
             <IngredientTableRow
               key={ingredient.id}
               ingredient={ingredient}
               rowIndex={index}
+              canMoveUp={index > 0}
+              canMoveDown={index < sortedIngredients.length - 1}
               onRename={renameFoodItem}
               onPortionWeight={setFoodPortionWeight}
               onMacroChange={setFoodMacroValue}
               onUnitsChange={handleUnitsChange}
               onGramsChange={handleGramsChange}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
               onDelete={handleDelete}
               navigation={navigation}
             />
@@ -172,6 +196,8 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
 type IngredientTableRowProps = {
   ingredient: RecipeIngredient;
   rowIndex: number;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onRename: (foodId: string, name: string) => void;
   onPortionWeight: (foodId: string, weight: number, timestamp: number) => void;
   onMacroChange: (
@@ -191,6 +217,8 @@ type IngredientTableRowProps = {
     nextValue: number,
     timestamp: number
   ) => void;
+  onMoveUp: (ingredientId: string) => void;
+  onMoveDown: (ingredientId: string) => void;
   onDelete: (ingredientId: string) => void;
   navigation: TableKeyboardNavigation;
 };
@@ -198,11 +226,15 @@ type IngredientTableRowProps = {
 function IngredientTableRow({
   ingredient,
   rowIndex,
+  canMoveUp,
+  canMoveDown,
   onRename,
   onPortionWeight,
   onMacroChange,
   onUnitsChange,
   onGramsChange,
+  onMoveUp,
+  onMoveDown,
   onDelete,
   navigation,
 }: IngredientTableRowProps) {
@@ -376,10 +408,34 @@ function IngredientTableRow({
         />
       </td>
       <td className="h-12" style={{ width: columnWidths.actions }}>
-        <TableRowDeleteButton
-          onDelete={() => onDelete(row.ingredient.id)}
-          ariaLabel="Remove ingredient"
-        />
+        <div className="flex h-full items-center justify-center gap-1 px-1">
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors enabled:hover:bg-muted disabled:opacity-40"
+            onClick={() => onMoveUp(row.ingredient.id)}
+            aria-label="Move ingredient up"
+            disabled={!canMoveUp}
+          >
+            <ChevronUpIcon className="size-4" />
+          </button>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors enabled:hover:bg-muted disabled:opacity-40"
+            onClick={() => onMoveDown(row.ingredient.id)}
+            aria-label="Move ingredient down"
+            disabled={!canMoveDown}
+          >
+            <ChevronDownIcon className="size-4" />
+          </button>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/40"
+            onClick={() => onDelete(row.ingredient.id)}
+            aria-label="Remove ingredient"
+          >
+            <Trash2Icon className="size-4" />
+          </button>
+        </div>
       </td>
     </tr>
   );

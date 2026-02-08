@@ -43,6 +43,7 @@ export const recipeIngredientSchema = z.object({
   id: z.string().min(1),
   recipeId: z.string().min(1),
   foodId: z.string().min(1),
+  sortOrder: z.number().int().nonnegative().optional(),
   quantityValue: z.number().positive(),
   createdAt: timeStampSchema,
   updatedAt: timeStampSchema,
