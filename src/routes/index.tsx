@@ -34,17 +34,17 @@ function HomeRoute() {
   const filteredRecipes = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
     const getSortKey = (recipe: Recipe) =>
-      recipe.updatedAt ?? recipe.createdAt ?? '';
+      recipe.updatedAt ?? recipe.createdAt ?? 0;
 
     return [...recipes]
       .filter((recipe) =>
         normalized ? recipe.name.toLowerCase().includes(normalized) : true
       )
-      .sort((a, b) => getSortKey(b).localeCompare(getSortKey(a)));
+      .sort((a, b) => getSortKey(b) - getSortKey(a));
   }, [recipes, searchTerm]);
 
   const handleCreateRecipe = () => {
-    const now = new Date().toISOString();
+    const now = Date.now();
     const baseName = searchTerm.trim();
     const newRecipe: Recipe = {
       id: crypto.randomUUID(),

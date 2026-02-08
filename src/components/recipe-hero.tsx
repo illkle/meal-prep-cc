@@ -31,7 +31,14 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
     value: String(recipe.portionsPrepared),
     onChange: handlePortionsCommit,
     timestamp: recipe.updatedAt,
-    validate: (v) => Number.isFinite(Number(v)) && Number(v) > 0,
+    validate: (v) => {
+      const parsed = Number(v);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+      }
+
+      return v;
+    },
   });
 
   return (

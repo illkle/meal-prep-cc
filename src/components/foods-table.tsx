@@ -124,11 +124,12 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
 type FoodRowProps = {
   food: FoodItem;
   onRename: (foodId: string, value: string) => void;
-  onPortionWeight: (foodId: string, weight?: number) => void;
+  onPortionWeight: (foodId: string, weight?: number, timestamp?: number) => void;
   onMacroChange: (
     foodId: string,
     key: keyof MacroTotals,
-    value: number
+    value: number,
+    timestamp?: number
   ) => void;
   onDelete: (foodId: string) => void;
   navigation: TableKeyboardNavigation;
@@ -178,7 +179,8 @@ function FoodRow({
       >
         <EditableNumberCellInput
           value={food.portionWeight ?? 0}
-          onCommit={(value) => onPortionWeight(food.id, value)}
+          onCommit={(value, timestamp) => onPortionWeight(food.id, value, timestamp)}
+          dbTimestamp={new Date(food.updatedAt)}
           className="h-12 w-full border-0 px-2 text-xs"
           {...navigation.getEditorHandlers({
             rowId: food.id,
@@ -200,7 +202,8 @@ function FoodRow({
         >
           <EditableNumberCellInput
             value={getFoodMacroValue(food, key)}
-            onCommit={(value) => onMacroChange(food.id, key, value)}
+            onCommit={(value, timestamp) => onMacroChange(food.id, key, value, timestamp)}
+            dbTimestamp={new Date(food.updatedAt)}
             className="h-12 w-full border-0 px-2 text-xs"
             {...navigation.getEditorHandlers({ rowId: food.id, colId: key })}
           />
