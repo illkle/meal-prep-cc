@@ -5,7 +5,7 @@ import { eq, useLiveQuery } from '@tanstack/react-db'
 import { calculateIngredientMacros, perPortionMacros, sumMacros } from './calculations'
 import { emptyMacroTotals, type FoodItem, type MacroTotals, type RecipeIngredient } from './schema'
 
-import { foodItemsCollection, recipeIngredientsCollection, recipesCollection } from './collections'
+import { foodItemsCollection, recipeIngredientsCollection, recipesCollection } from './schema'
 
 export function useFoodItems() {
   return useLiveQuery((q) => q.from({ food: foodItemsCollection }).orderBy(({ food }) => food.name))

@@ -6,9 +6,9 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { formatMacroValue, macroFormatter } from '@/lib/macro-formatters';
 import type { MacroTotals, Recipe } from '@/lib/db';
 import {
+  createRecipe,
+  deleteRecipeCascade,
   macroKeys,
-  recipeIngredientsCollection,
-  recipesCollection,
   useFoodsInRecipe,
   useRecipeNutrition,
   useRecipes,
@@ -44,17 +44,7 @@ function HomeRoute() {
   }, [recipes, searchTerm]);
 
   const handleCreateRecipe = () => {
-    const now = Date.now();
-    const baseName = searchTerm.trim();
-    const newRecipe: Recipe = {
-      id: crypto.randomUUID(),
-      name: baseName.length ? baseName : 'Untitled Recipe',
-      portionsPrepared: 1,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    recipesCollection.insert(newRecipe);
+    const newRecipe = createRecipe(searchTerm);
 
     navigate({
       to: '/recipes/$recipeId',
@@ -65,18 +55,6 @@ function HomeRoute() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     handleCreateRecipe();
-  };
-
-  const handleDeleteRecipe = (recipeId: string) => {
-    const ingredientIds = Array.from(recipeIngredientsCollection.values())
-      .filter((ingredient) => ingredient.recipeId === recipeId)
-      .map((ingredient) => ingredient.id);
-
-    if (ingredientIds.length) {
-      recipeIngredientsCollection.delete(ingredientIds);
-    }
-
-    recipesCollection.delete(recipeId);
   };
 
   const hasRecipes = recipes.length > 0;
@@ -117,11 +95,7 @@ function HomeRoute() {
             </div>
 
             {filteredRecipes.map((recipe) => (
-              <RecipeNutritionRow
-                key={recipe.id}
-                recipe={recipe}
-                onDelete={handleDeleteRecipe}
-              />
+              <RecipeNutritionRow key={recipe.id} recipe={recipe} />
             ))}
           </>
         ) : (
@@ -136,13 +110,7 @@ function HomeRoute() {
   );
 }
 
-function RecipeNutritionRow({
-  recipe,
-  onDelete,
-}: {
-  recipe: Recipe;
-  onDelete: (recipeId: string) => void;
-}) {
+function RecipeNutritionRow({ recipe }: { recipe: Recipe }) {
   const foodsInRecipeQuery = useFoodsInRecipe(recipe.id);
   const nutrition = useRecipeNutrition(
     foodsInRecipeQuery.data,
@@ -178,7 +146,7 @@ function RecipeNutritionRow({
       </Link>
 
       <TableRowDeleteButton
-        onDelete={() => onDelete(recipe.id)}
+        onDelete={() => deleteRecipeCascade(recipe.id)}
         ariaLabel="Remove recipe"
       />
     </div>

@@ -1,4 +1,4 @@
-import { recipeIngredientsCollection } from './collections'
+import { recipeIngredientsCollection } from './schema'
 import type { RecipeIngredient } from './schema'
 
 const RESEQUENCE_INTERVAL = 20
@@ -15,10 +15,7 @@ const parseTimestamp = (value: unknown): number => {
   return 0
 }
 
-const compareRecipeIngredientOrder = (
-  a: RecipeIngredient,
-  b: RecipeIngredient,
-) => {
+const compareRecipeIngredientOrder = (a: RecipeIngredient, b: RecipeIngredient) => {
   const aOrder = Number.isFinite(a.sortOrder) ? (a.sortOrder as number) : null
   const bOrder = Number.isFinite(b.sortOrder) ? (b.sortOrder as number) : null
 
@@ -53,11 +50,7 @@ const hasOrderAnomalies = (ingredients: Array<RecipeIngredient>) => {
   for (const ingredient of ingredients) {
     const sortOrder = ingredient.sortOrder
 
-    if (
-      typeof sortOrder !== 'number' ||
-      !Number.isInteger(sortOrder) ||
-      sortOrder < 0
-    ) {
+    if (typeof sortOrder !== 'number' || !Number.isInteger(sortOrder) || sortOrder < 0) {
       return true
     }
 
@@ -148,9 +141,7 @@ export function moveRecipeIngredient(
   }
 
   const ordered = getOrderedIngredients(recipeId)
-  const currentIndex = ordered.findIndex(
-    (ingredient) => ingredient.id === ingredientId,
-  )
+  const currentIndex = ordered.findIndex((ingredient) => ingredient.id === ingredientId)
 
   if (currentIndex < 0) {
     return

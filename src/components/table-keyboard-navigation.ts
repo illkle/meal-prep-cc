@@ -105,6 +105,10 @@ function isNumericKeyPress(event: globalThis.KeyboardEvent): boolean {
   return /^[0-9]$/.test(event.key);
 }
 
+function getNormalizedCode(event: globalThis.KeyboardEvent): string {
+  return event.code.toLowerCase();
+}
+
 export type TableKeyboardNavigation = {
   tableRef: RefObject<HTMLDivElement | null>;
   registerCell: (
@@ -292,26 +296,26 @@ export function useTableKeyboardNavigation({
     (event) => {
       if (!activeRef.current || modeRef.current !== 'select') return;
 
-      const key = event.key.toLowerCase();
+      const code = getNormalizedCode(event);
 
-      switch (key) {
+      switch (code) {
         case 'arrowup':
-        case 'w':
+        case 'keyw':
           event.preventDefault();
           moveSelection(-1, 0);
           break;
         case 'arrowdown':
-        case 's':
+        case 'keys':
           event.preventDefault();
           moveSelection(1, 0);
           break;
         case 'arrowleft':
-        case 'a':
+        case 'keya':
           event.preventDefault();
           moveSelection(0, -1);
           break;
         case 'arrowright':
-        case 'd':
+        case 'keyd':
           event.preventDefault();
           moveSelection(0, 1);
           break;

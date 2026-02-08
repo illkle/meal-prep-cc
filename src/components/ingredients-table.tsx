@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ChevronDownIcon, ChevronUpIcon, Trash2Icon } from 'lucide-react';
 
 import { macroColumnHeaders } from '@/components/food-table-shared';
@@ -13,16 +13,19 @@ import {
 import type { FoodItem, MacroTotals, RecipeIngredient } from '@/lib/db';
 import {
   calculateIngredientMacros,
+  deleteRecipeIngredient,
   getFoodMacroValue,
   gramsForIngredient,
   moveRecipeIngredient,
   renameFoodItem,
-  recipeIngredientsCollection,
+  setRecipeIngredientGrams,
+  setRecipeIngredientUnits,
   setFoodMacroValue,
   setFoodPortionWeight,
   sortRecipeIngredientsForDisplay,
 } from '@/lib/db';
 import { useFood, useRecipeIngredients } from '@/lib/db';
+import { Button } from '@/components/ui/button';
 
 const columnWidths = {
   food: '30%',
@@ -58,57 +61,6 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
   const sortedIngredients = useMemo(
     () => sortRecipeIngredientsForDisplay(ingredients),
     [ingredients]
-  );
-
-  const handleUnitsChange = useCallback(
-    (
-      ingredientId: string,
-      nextValue: number,
-      portionWeight: number,
-      timestamp: number = new Date().getTime()
-    ) => {
-      if (!Number.isFinite(nextValue) || nextValue <= 0) return;
-      if (!Number.isFinite(portionWeight) || portionWeight <= 0) return;
-
-      recipeIngredientsCollection.update(ingredientId, (draft) => {
-        draft.quantityValue = nextValue * portionWeight;
-        draft.updatedAt = timestamp;
-      });
-    },
-    []
-  );
-
-  const handleGramsChange = useCallback(
-    (
-      ingredientId: string,
-      nextValue: number,
-      timestamp: number = new Date().getTime()
-    ) => {
-      if (!Number.isFinite(nextValue) || nextValue <= 0) return;
-      recipeIngredientsCollection.update(ingredientId, (draft) => {
-        draft.quantityValue = nextValue;
-        draft.updatedAt = timestamp;
-      });
-    },
-    []
-  );
-
-  const handleDelete = useCallback((ingredientId: string) => {
-    recipeIngredientsCollection.delete(ingredientId);
-  }, []);
-
-  const handleMoveUp = useCallback(
-    (ingredientId: string) => {
-      moveRecipeIngredient(recipeId, ingredientId, 'up');
-    },
-    [recipeId]
-  );
-
-  const handleMoveDown = useCallback(
-    (ingredientId: string) => {
-      moveRecipeIngredient(recipeId, ingredientId, 'down');
-    },
-    [recipeId]
   );
 
   const navigation = useTableKeyboardNavigation({
@@ -170,14 +122,6 @@ export function IngredientsTable({ recipeId }: { recipeId: string }) {
               rowIndex={index}
               canMoveUp={index > 0}
               canMoveDown={index < sortedIngredients.length - 1}
-              onRename={renameFoodItem}
-              onPortionWeight={setFoodPortionWeight}
-              onMacroChange={setFoodMacroValue}
-              onUnitsChange={handleUnitsChange}
-              onGramsChange={handleGramsChange}
-              onMoveUp={handleMoveUp}
-              onMoveDown={handleMoveDown}
-              onDelete={handleDelete}
               navigation={navigation}
             />
           ))}
@@ -198,28 +142,6 @@ type IngredientTableRowProps = {
   rowIndex: number;
   canMoveUp: boolean;
   canMoveDown: boolean;
-  onRename: (foodId: string, name: string) => void;
-  onPortionWeight: (foodId: string, weight: number, timestamp: number) => void;
-  onMacroChange: (
-    foodId: string,
-    key: keyof MacroTotals,
-    value: number,
-    timestamp: number
-  ) => void;
-  onUnitsChange: (
-    ingredientId: string,
-    nextValue: number,
-    portionWeight: number,
-    timestamp: number
-  ) => void;
-  onGramsChange: (
-    ingredientId: string,
-    nextValue: number,
-    timestamp: number
-  ) => void;
-  onMoveUp: (ingredientId: string) => void;
-  onMoveDown: (ingredientId: string) => void;
-  onDelete: (ingredientId: string) => void;
   navigation: TableKeyboardNavigation;
 };
 
@@ -228,14 +150,6 @@ function IngredientTableRow({
   rowIndex,
   canMoveUp,
   canMoveDown,
-  onRename,
-  onPortionWeight,
-  onMacroChange,
-  onUnitsChange,
-  onGramsChange,
-  onMoveUp,
-  onMoveDown,
-  onDelete,
   navigation,
 }: IngredientTableRowProps) {
   const foodQuery = useFood(ingredient.foodId);
@@ -288,7 +202,7 @@ function IngredientTableRow({
       >
         <EditableTextCellInput
           value={row.food.name}
-          onCommit={(value) => onRename(row.food.id, value)}
+          onCommit={(value) => renameFoodItem(row.food.id, value)}
           className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
           {...navigation.getEditorHandlers(
             {
@@ -312,7 +226,7 @@ function IngredientTableRow({
         <EditableNumberCellInput
           value={row.food.portionWeight ?? 0}
           onCommit={(value, timestamp) =>
-            onPortionWeight(row.food.id, value, timestamp)
+            setFoodPortionWeight(row.food.id, value, timestamp)
           }
           className="h-12 w-full border-0 px-2 text-xs"
           dbTimestamp={new Date(row.food.updatedAt)}
@@ -337,7 +251,7 @@ function IngredientTableRow({
           <EditableNumberCellInput
             value={getFoodMacroValue(row.food, key)}
             onCommit={(value, timestamp) =>
-              onMacroChange(row.food.id, key, value, timestamp)
+              setFoodMacroValue(row.food.id, key, value, timestamp)
             }
             dbTimestamp={new Date(row.food.updatedAt)}
             className="h-12 w-full border-0 px-2 text-xs"
@@ -362,7 +276,7 @@ function IngredientTableRow({
           <EditableNumberCellInput
             value={row.units ?? 0}
             onCommit={(value, timestamp) =>
-              onUnitsChange(
+              setRecipeIngredientUnits(
                 row.ingredient.id,
                 value,
                 row.food.portionWeight!,
@@ -370,9 +284,9 @@ function IngredientTableRow({
               )
             }
             className="h-12 w-full border-0 px-2 text-xs"
-            dbTimestamp={new Date(
-              Math.max(row.ingredient.updatedAt, row.food.updatedAt)
-            )}
+            dbTimestamp={
+              new Date(Math.max(row.ingredient.updatedAt, row.food.updatedAt))
+            }
             {...navigation.getEditorHandlers({
               rowId: row.ingredient.id,
               colId: 'units',
@@ -397,7 +311,7 @@ function IngredientTableRow({
         <EditableNumberCellInput
           value={row.grams ?? 0}
           onCommit={(value, timestamp) =>
-            onGramsChange(row.ingredient.id, value, timestamp)
+            setRecipeIngredientGrams(row.ingredient.id, value, timestamp)
           }
           className="h-12 w-full border-0 px-2 text-xs"
           dbTimestamp={new Date(row.ingredient.updatedAt)}
@@ -408,33 +322,45 @@ function IngredientTableRow({
         />
       </td>
       <td className="h-12" style={{ width: columnWidths.actions }}>
-        <div className="flex h-full items-center justify-center gap-1 px-1">
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors enabled:hover:bg-muted disabled:opacity-40"
-            onClick={() => onMoveUp(row.ingredient.id)}
+        <div className="flex h-full items-stretch justify-center">
+          <Button
+            variant="ghost"
+            onClick={() =>
+              moveRecipeIngredient(
+                row.ingredient.recipeId,
+                row.ingredient.id,
+                'up'
+              )
+            }
+            className="h-12 grow"
             aria-label="Move ingredient up"
             disabled={!canMoveUp}
           >
             <ChevronUpIcon className="size-4" />
-          </button>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors enabled:hover:bg-muted disabled:opacity-40"
-            onClick={() => onMoveDown(row.ingredient.id)}
+          </Button>
+          <Button
+            onClick={() =>
+              moveRecipeIngredient(
+                row.ingredient.recipeId,
+                row.ingredient.id,
+                'down'
+              )
+            }
+            variant="ghost"
+            className="h-12 grow"
             aria-label="Move ingredient down"
             disabled={!canMoveDown}
           >
             <ChevronDownIcon className="size-4" />
-          </button>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/40"
-            onClick={() => onDelete(row.ingredient.id)}
+          </Button>
+          <Button
+            onClick={() => deleteRecipeIngredient(row.ingredient.id)}
             aria-label="Remove ingredient"
+            variant="ghost"
+            className="h-12 grow"
           >
             <Trash2Icon className="size-4" />
-          </button>
+          </Button>
         </div>
       </td>
     </tr>

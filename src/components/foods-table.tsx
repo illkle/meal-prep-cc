@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { macroColumnHeaders } from '@/components/food-table-shared';
 import {
@@ -10,11 +10,10 @@ import {
   EditableTextCellInput,
   TableRowDeleteButton,
 } from '@/components/table-editable-cells';
-import type { FoodItem, MacroTotals } from '@/lib/db';
+import type { FoodItem } from '@/lib/db';
 import {
-  foodItemsCollection,
+  deleteFoodItemCascade,
   getFoodMacroValue,
-  recipeIngredientsCollection,
   renameFoodItem,
   setFoodMacroValue,
   setFoodPortionWeight,
@@ -43,18 +42,6 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
       }),
     [foods]
   );
-
-  const handleDelete = useCallback((foodId: string) => {
-    const ingredientIds = Array.from(recipeIngredientsCollection.values())
-      .filter((ingredient) => ingredient.foodId === foodId)
-      .map((ingredient) => ingredient.id);
-
-    if (ingredientIds.length) {
-      recipeIngredientsCollection.delete(ingredientIds);
-    }
-
-    foodItemsCollection.delete(foodId);
-  }, []);
 
   const navigation = useTableKeyboardNavigation({
     rowIds: sortedFoods.map((food) => food.id),
@@ -102,10 +89,6 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
             <FoodRow
               key={food.id}
               food={food}
-              onRename={renameFoodItem}
-              onPortionWeight={setFoodPortionWeight}
-              onMacroChange={setFoodMacroValue}
-              onDelete={handleDelete}
               navigation={navigation}
             />
           ))}
@@ -123,25 +106,11 @@ export function FoodsTable({ foods }: { foods: Array<FoodItem> }) {
 
 type FoodRowProps = {
   food: FoodItem;
-  onRename: (foodId: string, value: string) => void;
-  onPortionWeight: (foodId: string, weight?: number, timestamp?: number) => void;
-  onMacroChange: (
-    foodId: string,
-    key: keyof MacroTotals,
-    value: number,
-    timestamp?: number
-  ) => void;
-  onDelete: (foodId: string) => void;
   navigation: TableKeyboardNavigation;
 };
 
 function FoodRow({
   food,
-
-  onRename,
-  onPortionWeight,
-  onMacroChange,
-  onDelete,
   navigation,
 }: FoodRowProps) {
   return (
@@ -159,7 +128,7 @@ function FoodRow({
         <EditableTextCellInput
           value={food.name}
           placeholder="Unnamed Food"
-          onCommit={(value) => onRename(food.id, value)}
+          onCommit={(value) => renameFoodItem(food.id, value)}
           className="h-12 w-full border-0 px-3 text-left text-base font-semibold uppercase tracking-[0.2em]"
           {...navigation.getEditorHandlers(
             { rowId: food.id, colId: 'food' },
@@ -179,7 +148,9 @@ function FoodRow({
       >
         <EditableNumberCellInput
           value={food.portionWeight ?? 0}
-          onCommit={(value, timestamp) => onPortionWeight(food.id, value, timestamp)}
+          onCommit={(value, timestamp) =>
+            setFoodPortionWeight(food.id, value, timestamp)
+          }
           dbTimestamp={new Date(food.updatedAt)}
           className="h-12 w-full border-0 px-2 text-xs"
           {...navigation.getEditorHandlers({
@@ -202,7 +173,9 @@ function FoodRow({
         >
           <EditableNumberCellInput
             value={getFoodMacroValue(food, key)}
-            onCommit={(value, timestamp) => onMacroChange(food.id, key, value, timestamp)}
+            onCommit={(value, timestamp) =>
+              setFoodMacroValue(food.id, key, value, timestamp)
+            }
             dbTimestamp={new Date(food.updatedAt)}
             className="h-12 w-full border-0 px-2 text-xs"
             {...navigation.getEditorHandlers({ rowId: food.id, colId: key })}
@@ -211,7 +184,7 @@ function FoodRow({
       ))}
       <td className="h-12" style={{ width: columnWidths.actions }}>
         <TableRowDeleteButton
-          onDelete={() => onDelete(food.id)}
+          onDelete={() => deleteFoodItemCascade(food.id)}
           ariaLabel="Remove food"
         />
       </td>

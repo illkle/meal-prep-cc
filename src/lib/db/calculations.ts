@@ -3,8 +3,8 @@ import type { FoodItem, MacroTotals, RecipeIngredient } from './schema'
 export const macroKeys: Array<keyof MacroTotals> = [
   'calories',
   'protein',
-  'carbs',
   'fat',
+  'carbs',
 ]
 
 export function gramsForIngredient(

@@ -1,4 +1,4 @@
-import { foodItemsCollection } from './collections'
+import { foodItemsCollection, recipeIngredientsCollection } from './schema'
 import { macroFieldMap } from './food-macro-fields'
 import type { MacroTotals } from './schema'
 
@@ -40,4 +40,16 @@ export function setFoodMacroValue(
     draft[targetKey] = sanitized
     draft.updatedAt = timestamp
   })
+}
+
+export function deleteFoodItemCascade(foodId: string) {
+  const ingredientIds = Array.from(recipeIngredientsCollection.values())
+    .filter((ingredient) => ingredient.foodId === foodId)
+    .map((ingredient) => ingredient.id)
+
+  if (ingredientIds.length) {
+    recipeIngredientsCollection.delete(ingredientIds)
+  }
+
+  foodItemsCollection.delete(foodId)
 }

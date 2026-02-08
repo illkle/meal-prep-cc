@@ -1,10 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Autocomplete } from '@base-ui/react/autocomplete';
 
 import {
-  foodItemsCollection,
-  getNextRecipeIngredientSortOrder,
-  recipeIngredientsCollection,
+  addIngredientToRecipe,
+  createFoodAndAddIngredient,
   type FoodItem,
   useFoodItems,
 } from '@/lib/db';
@@ -29,51 +28,6 @@ export function IngredientLibrarySearch({
   className,
 }: AddIngredientButtonProps) {
   const foodsQuery = useFoodItems();
-
-  const addIngredientToRecipe = useCallback(
-    (foodId: string) => {
-      if (!recipeId) return;
-      const now = new Date().toISOString();
-      recipeIngredientsCollection.insert({
-        id: crypto.randomUUID(),
-        recipeId,
-        foodId,
-        sortOrder: getNextRecipeIngredientSortOrder(recipeId),
-        quantityValue: 100,
-        createdAt: now,
-        updatedAt: now,
-      });
-      setInputValue('');
-    },
-    [recipeId]
-  );
-
-  const createFoodAndAddToRecipe = useCallback(
-    (inputValue: string) => {
-      if (!recipeId) return;
-
-      const trimmedName = inputValue.trim();
-      if (!trimmedName) return;
-
-      const now = new Date().getTime();
-      const foodId = crypto.randomUUID();
-      const newFood: FoodItem = {
-        id: foodId,
-        name: trimmedName,
-        caloriesPer100g: 0,
-        proteinPer100g: 0,
-        carbsPer100g: 0,
-        fatPer100g: 0,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      foodItemsCollection.insert(newFood);
-      addIngredientToRecipe(foodId);
-      setInputValue('');
-    },
-    [addIngredientToRecipe, recipeId]
-  );
 
   const [inputValue, setInputValue] = useState('');
 
@@ -107,7 +61,11 @@ export function IngredientLibrarySearch({
                     <Autocomplete.Item
                       key={item.id}
                       value={item}
-                      onClick={() => addIngredientToRecipe(item.id)}
+                      onClick={() => {
+                        if (!recipeId) return;
+                        addIngredientToRecipe(recipeId, item.id);
+                        setInputValue('');
+                      }}
                       className="data-highlighted:bg-accent data-highlighted:text-accent-foreground gap-2 rounded-none py-2 pr-8 pl-2 text-xs relative flex w-full cursor-default items-center outline-hidden select-none"
                     >
                       {item.name}
@@ -119,7 +77,11 @@ export function IngredientLibrarySearch({
                   <Autocomplete.Item
                     key={`create`}
                     value={item}
-                    onClick={() => createFoodAndAddToRecipe(inputValue)}
+                    onClick={() => {
+                      if (!recipeId) return;
+                      createFoodAndAddIngredient(recipeId, inputValue);
+                      setInputValue('');
+                    }}
                     className="data-highlighted:bg-accent data-highlighted:text-accent-foreground border-border py-2 pr-8 pl-2 text-xs relative flex w-full cursor-default items-center outline-hidden select-none data-disabled:opacity-50"
                   >
                     Create «{inputValue}»

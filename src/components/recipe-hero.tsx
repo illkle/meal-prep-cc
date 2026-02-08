@@ -1,35 +1,14 @@
-import { useCallback } from 'react';
-
 import { Input } from '@/components/ui/input';
 import type { Recipe } from '@/lib/db';
-import { recipesCollection } from '@/lib/db';
+import { renameRecipe, setRecipePortionsPrepared } from '@/lib/db';
 import { XIcon } from 'lucide-react';
 import { useLinkedValue } from '@/lib/useDbLinkedValue';
 
 export function RecipeHero({ recipe }: { recipe: Recipe }) {
-  const handleNameCommit = useCallback(
-    (name: string) => {
-      recipesCollection.update(recipe.id, (draft) => {
-        draft.name = name;
-        draft.updatedAt = new Date().getTime();
-      });
-    },
-    [recipe]
-  );
-
-  const handlePortionsCommit = useCallback(
-    (portions: string, timestamp: number) => {
-      recipesCollection.update(recipe.id, (draft) => {
-        draft.portionsPrepared = Number(portions);
-        draft.updatedAt = timestamp;
-      });
-    },
-    [recipe]
-  );
-
   const { internalValue, updateHandler } = useLinkedValue({
     value: String(recipe.portionsPrepared),
-    onChange: handlePortionsCommit,
+    onChange: (portions, timestamp) =>
+      setRecipePortionsPrepared(recipe.id, Number(portions), timestamp),
     timestamp: recipe.updatedAt,
     validate: (v) => {
       const parsed = Number(v);
@@ -47,7 +26,7 @@ export function RecipeHero({ recipe }: { recipe: Recipe }) {
         <div className="flex w-full flex-1 flex-col gap-2">
           <Input
             value={recipe?.name}
-            onChange={(event) => handleNameCommit(event.target.value)}
+            onChange={(event) => renameRecipe(recipe.id, event.target.value)}
             disabled={!recipe}
             placeholder="Unnamed Recipe"
             styling="largeSearch"
